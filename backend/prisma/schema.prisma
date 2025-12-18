@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+}
+
+model User {
+  id           String          @id @default(uuid())
+  role         Role
+  email        String          @unique
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  
+  studentProfile StudentProfile?
+  
+  @@map("users")
+}
+
+model StudentProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  studentCode    String   @unique
+  fullName       String
+  phone          String
+  avatarUrl      String?
+  faceRegistered Boolean  @default(false)
+  
+  user                User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionRegistrations SessionRegistration[]
+  attendances         Attendance[]
+  
+  @@map("student_profiles")
+}
+
+model ClassSession {
+  id                   String   @id @default(uuid())
+  date                 String   // Format: YYYY-MM-DD
+  name                 String   // Ca 1, Ca 2, Ca 3
+  startTime            String   // Format: HH:mm
+  endTime              String   // Format: HH:mm
+  registrationDeadline DateTime // startTime - 2 hours
+  isDeleted            Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  
+  sessionRegistrations SessionRegistration[]
+  attendances          Attendance[]
+  
+  @@map("class_sessions")
+}
+
+model SessionRegistration {
+  id           String   @id @default(uuid())
+  studentId    String
+  sessionId    String
+  registeredAt DateTime @default(now())
+  
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session ClassSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@unique([studentId, sessionId])
+  @@map("session_registrations")
+}
+
+model Attendance {
+  id                String            @id @default(uuid())
+  studentId         String
+  sessionId         String
+  checkInTime       DateTime?
+  checkInLat        Float?
+  checkInLng        Float?
+  checkInFaceScore  Float?
+  checkOutTime      DateTime?
+  checkOutLat       Float?
+  checkOutLng       Float?
+  checkOutFaceScore Float?
+  status            AttendanceStatus  @default(ABSENT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session ClassSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@unique([studentId, sessionId])
+  @@map("attendances")
+}

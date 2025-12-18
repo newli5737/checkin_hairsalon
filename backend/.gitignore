@@ -1,0 +1,25 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build
+dist/
+coverage/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# NestJS
+nest-cli.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

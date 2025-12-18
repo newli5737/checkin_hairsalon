@@ -1,0 +1,111 @@
+import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "./components/LoginPage";
+import Dashboard from "./components/Dashboard";
+import CheckInPage from "./components/CheckInPage";
+import AttendanceHistory from "./components/AttendanceHistory";
+import ProfilePage from "./components/ProfilePage";
+import AdminLoginPage from "./components/admin/AdminLoginPage";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import StudentManagement from "./components/admin/StudentManagement";
+import SessionManagement from "./components/admin/SessionManagement";
+import AttendanceViewer from "./components/admin/AttendanceViewer";
+import AdminLayout from "./components/admin/AdminLayout";
+import { Toaster } from "./components/ui/sonner";
+
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+
+    if (token && user) {
+      const userData = JSON.parse(user);
+      setIsLoggedIn(true);
+      setIsAdmin(userData.role === 'ADMIN');
+    }
+  }, []);
+
+  const handleLogin = (user: any) => {
+    setIsLoggedIn(true);
+    setIsAdmin(user.role === 'ADMIN');
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setIsAdmin(false);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
+
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
+          {/* Student Routes */}
+          <Route
+            path="/login"
+            element={
+              isLoggedIn && !isAdmin ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />
+            }
+          />
+          <Route
+            path="/"
+            element={
+              isLoggedIn && !isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />
+            }
+          />
+          <Route
+            path="/check-in"
+            element={
+              isLoggedIn && !isAdmin ? <CheckInPage onLogout={handleLogout} /> : <Navigate to="/login" />
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              isLoggedIn && !isAdmin ? <AttendanceHistory onLogout={handleLogout} /> : <Navigate to="/login" />
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              isLoggedIn && !isAdmin ? <ProfilePage onLogout={handleLogout} /> : <Navigate to="/login" />
+            }
+          />
+
+          {/* Admin Routes */}
+          <Route
+            path="/admin/login"
+            element={
+              isLoggedIn && isAdmin ? <Navigate to="/admin/dashboard" /> : <AdminLoginPage onLogin={handleLogin} />
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              isLoggedIn && isAdmin ? <AdminLayout onLogout={handleLogout} /> : <Navigate to="/admin/login" />
+            }
+          >
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="students" element={<StudentManagement />} />
+            <Route path="sessions" element={<SessionManagement />} />
+            <Route path="attendance" element={<AttendanceViewer />} />
+            {/* Redirect /admin to /admin/dashboard */}
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          </Route>
+
+          {/* Default redirect */}
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+        <Toaster />
+      </div>
+    </Router>
+  );
+}
+
+export default App;

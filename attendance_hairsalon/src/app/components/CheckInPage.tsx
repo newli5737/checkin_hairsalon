@@ -1,0 +1,480 @@
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Progress } from "./ui/progress";
+import Navigation from "./Navigation";
+import { toast } from "sonner";
+import { Camera, MapPin, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { uploadToCloudinary } from "../services/cloudinary";
+import { attendanceApi } from "../services/api";
+
+interface CheckInPageProps {
+  onLogout?: () => void;
+}
+
+export default function CheckInPage({ onLogout }: CheckInPageProps) {
+  const navigate = useNavigate();
+  const locationState = useLocation();
+  const [sessionId, setSessionId] = useState<string | null>(locationState.state?.sessionId || null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
+  const [step, setStep] = useState(sessionId ? 1 : 0);
+  const [faceStatus, setFaceStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
+  const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [faceImageUrl, setFaceImageUrl] = useState<string | null>(null);
+  const [checkInLoading, setCheckInLoading] = useState(false);
+
+  useEffect(() => {
+    if (!sessionId) {
+      fetchSessions();
+    }
+  }, [sessionId]);
+
+  const fetchSessions = async () => {
+    try {
+      setLoadingSessions(true);
+      const data = await import("../services/api").then(m => m.sessionApi.getTodaySessions());
+      setSessions(data);
+    } catch (error) {
+      toast.error("Không thể tải danh sách ca học");
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  const handleSelectSession = (id: string) => {
+    setSessionId(id);
+    setStep(1);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" }
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error: any) {
+      console.error("Camera access error:", error);
+      let errorMessage = "Không thể truy cập camera";
+
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = "Bạn đã chặn quyền truy cập camera. Vui lòng kiểm tra cài đặt trình duyệt.";
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = "Không tìm thấy camera trên thiết bị này.";
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = "Camera đang được sử dụng bởi ứng dụng khác.";
+      } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        errorMessage = "Camera chỉ hoạt động trên HTTPS hoặc localhost.";
+      }
+
+      toast.error(errorMessage);
+      setFaceStatus("idle");
+    }
+  };
+
+  const dataURLtoFile = (dataurl: string, filename: string) => {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }
+
+  const capturePhoto = async () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+
+      if (context) {
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL("image/jpeg");
+        setCapturedImage(imageData);
+
+        // Stop camera
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
+        }
+
+        // Upload to Cloudinary
+        setFaceStatus("processing");
+        try {
+          const file = dataURLtoFile(imageData, "check-in-face.jpg");
+          const url = await uploadToCloudinary(file);
+          setFaceImageUrl(url);
+          setFaceStatus("success");
+          toast.success("Ảnh đã được tải lên");
+          setTimeout(() => setStep(2), 1000);
+        } catch (error) {
+          console.error(error);
+          setFaceStatus("error");
+          toast.error("Lỗi khi tải ảnh lên, vui lòng thử lại");
+        }
+      }
+    }
+  };
+
+  const getLocation = () => {
+    setGpsStatus("processing");
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          };
+          setLocation(loc);
+          setGpsStatus("success");
+          toast.success("Đã lấy được vị trí");
+        },
+        (error) => {
+          console.error(error);
+          setGpsStatus("error");
+          toast.error("Không thể lấy vị trí: " + error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setGpsStatus("error");
+      toast.error("Trình duyệt không hỗ trợ Geolocation");
+    }
+  };
+
+  // Auto advance from step 2 if location success
+  useEffect(() => {
+    if (step === 2 && gpsStatus === "success") {
+      setTimeout(() => setStep(3), 1000);
+    }
+  }, [step, gpsStatus]);
+
+  const submitCheckIn = async () => {
+    if (!sessionId || !faceImageUrl || !location) {
+      toast.error("Thiếu thông tin điểm danh");
+      return;
+    }
+
+    setCheckInLoading(true);
+    try {
+      await attendanceApi.checkIn({
+        sessionId,
+        faceImageUrl,
+        latitude: location.lat,
+        longitude: location.lng,
+        deviceInfo: navigator.userAgent
+      });
+
+      toast.success("Điểm danh thành công!");
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
+    } catch (error: any) {
+      toast.error(error.message || "Điểm danh thất bại");
+      // If face valid failed, maybe go back to step 1?
+      // For now stay here user can retry or navigation back
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
+
+  const progressValue = (step / 3) * 100;
+
+  return (
+    <div className="min-h-screen pb-20 md:pb-0">
+      <Navigation onLogout={onLogout || (() => navigate("/login"))} />
+
+      <div className="container mx-auto px-4 py-6 max-w-2xl">
+        {/* Progress */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-semibold">Điểm danh</h2>
+            <span className="text-sm text-gray-600">
+              {step === 0 ? "Chọn ca học" : `Bước ${step}/3`}
+            </span>
+          </div>
+          {step > 0 && <Progress value={progressValue} className="h-2" />}
+        </div>
+
+        {/* Step 0: Select Session */}
+        {step === 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Chọn ca học hôm nay</CardTitle>
+              <CardDescription>Vui lòng chọn ca học bạn muốn điểm danh</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingSessions ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+                  <p className="mt-2 text-gray-500">Đang tải danh sách ca học...</p>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Không có ca học nào diễn ra hôm nay.</p>
+                  <Button variant="link" onClick={() => navigate("/")}>Quay về trang chủ</Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => handleSelectSession(session.id)}
+                    >
+                      <div>
+                        <h3 className="font-semibold text-lg">{session.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          {session.startTime} - {session.endTime}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline">Chọn</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 1: Face Recognition */}
+        {step === 1 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5" />
+                <CardTitle>Bước 1: Chụp ảnh khuôn mặt</CardTitle>
+              </div>
+              <CardDescription>
+                Vui lòng chụp ảnh khuôn mặt của bạn để xác thực
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!capturedImage ? (
+                <div className="space-y-4">
+                  <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                    <canvas ref={canvasRef} className="hidden" />
+                    {!cameraStream && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Camera chưa được bật</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {!cameraStream ? (
+                    <Button onClick={startCamera} className="w-full">
+                      <Camera className="w-4 h-4 mr-2" />
+                      Bật camera
+                    </Button>
+                  ) : (
+                    <Button onClick={capturePhoto} className="w-full">
+                      Chụp và Tải lên
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={capturedImage}
+                      alt="Captured face"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {faceStatus === "processing" && (
+                    <div className="flex items-center justify-center gap-2 text-blue-600">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Đang tải ảnh lên...</span>
+                    </div>
+                  )}
+
+                  {faceStatus === "success" && (
+                    <div className="flex items-center justify-center gap-2 text-green-600">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span>Ảnh hợp lệ (Sẵn sàng gửi)</span>
+                    </div>
+                  )}
+
+                  {faceStatus === "error" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2 text-red-600">
+                        <XCircle className="w-5 h-5" />
+                        <span>Lỗi khi tải ảnh</span>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setCapturedImage(null);
+                          setFaceStatus("idle");
+                          startCamera();
+                        }}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Chụp lại
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 2: GPS Location */}
+        {step === 2 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                <CardTitle>Bước 2: Xác định vị trí</CardTitle>
+              </div>
+              <CardDescription>
+                Vui lòng cho phép truy cập vị trí của bạn
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {location ? (
+                <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Vĩ độ:</span>
+                    <span className="font-mono">{location.lat.toFixed(6)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Kinh độ:</span>
+                    <span className="font-mono">{location.lng.toFixed(6)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Sai số:</span>
+                    <span className="font-mono">{Math.round(location.accuracy)}m</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Chưa có thông tin vị trí</p>
+                </div>
+              )}
+
+              {gpsStatus === "processing" && (
+                <div className="flex items-center justify-center gap-2 text-blue-600">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Đang lấy vị trí...</span>
+                </div>
+              )}
+
+              {gpsStatus === "error" && (
+                <Button onClick={getLocation} variant="outline" className="w-full">
+                  Thử lại
+                </Button>
+              )}
+
+              {gpsStatus === "idle" && (
+                <Button onClick={getLocation} className="w-full">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Lấy vị trí hiện tại
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Confirm */}
+        {step === 3 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <CardTitle>Bước 3: Xác nhận điểm danh</CardTitle>
+              </div>
+              <CardDescription>
+                Gửi thông tin điểm danh lên hệ thống
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-900">Ảnh đã được chụp</p>
+                    <p className="text-sm text-green-700">Đã sẵn sàng gửi</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-900">Vị trí đã xác định</p>
+                    <p className="text-sm text-green-700">Độ chính xác: {location ? Math.round(location.accuracy) : 0}m</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <Button onClick={submitCheckIn} className="w-full" size="lg" disabled={checkInLoading}>
+                  {checkInLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Gửi điểm danh
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Back Button */}
+        {step === 1 && (
+          <Button
+            variant="ghost"
+            className="w-full mt-4"
+            onClick={() => navigate("/")}
+          >
+            Quay lại
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
