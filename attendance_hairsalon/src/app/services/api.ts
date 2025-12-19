@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://witch-reported-cdt-crop.trycloudflare.com';
+const API_BASE_URL = 'https://nose-clouds-stanford-eval.trycloudflare.com';
 
 // Helper function to get auth token
 const getAuthToken = () => {

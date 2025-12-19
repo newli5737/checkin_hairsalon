@@ -5,13 +5,18 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for frontend
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://checkin-hairsalon.vercel.app',
+      /^https:\/\/.*\.trycloudflare\.com$/,
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
-  // Enable validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -20,8 +25,8 @@ async function bootstrap() {
     }),
   );
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 8000;
   await app.listen(port);
-  console.log(`Backend is running on: http://localhost:${port}`);
+  console.log(`Backend is running on port ${port}`);
 }
 bootstrap();
