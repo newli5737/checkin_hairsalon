@@ -30,8 +30,44 @@ export class AuthService {
                 id: user.id,
                 email: user.email,
                 role: user.role,
+                // Include profile info if available? 
+                // Currently just user info.
             },
         };
+    }
+
+    async register(registerDto: any) {
+        // Check if user exists
+        const existingUser = await this.prisma.user.findUnique({
+            where: { email: registerDto.email },
+        });
+
+        if (existingUser) {
+            throw new UnauthorizedException('Email đã tồn tại');
+        }
+
+        const hashedPassword = await this.hashPassword(registerDto.password);
+
+        // Create User
+        const user = await this.prisma.user.create({
+            data: {
+                email: registerDto.email,
+                passwordHash: hashedPassword,
+                role: 'STUDENT', // Default role
+            },
+        });
+
+        // Create empty StudentProfile linked to user
+        await this.prisma.studentProfile.create({
+            data: {
+                userId: user.id,
+                fullName: registerDto.fullName,
+                studentCode: 'S' + Date.now(), // Temporary code generation
+                phone: '', // Default empty, update later
+            }
+        });
+
+        return this.login({ email: registerDto.email, password: registerDto.password });
     }
 
     async validateUser(email: string, password: string) {

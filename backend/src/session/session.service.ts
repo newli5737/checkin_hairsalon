@@ -32,9 +32,13 @@ export class SessionService {
         });
     }
 
-    async getSessionsByDate(date: string) {
+    async getSessionsByDate(date: string, trainingClassId?: string) {
+        const where: any = { date, isDeleted: false };
+        if (trainingClassId) {
+            where.trainingClassId = trainingClassId;
+        }
         return this.prisma.classSession.findMany({
-            where: { date, isDeleted: false },
+            where,
             orderBy: { startTime: 'asc' },
         });
     }
@@ -79,9 +83,9 @@ export class SessionService {
         });
     }
 
-    async getTodaySessions() {
+    async getTodaySessions(trainingClassId?: string) {
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        return this.getSessionsByDate(today);
+        return this.getSessionsByDate(today, trainingClassId);
     }
 
     async registerForSession(studentId: string, sessionId: string) {

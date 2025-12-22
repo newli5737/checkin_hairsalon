@@ -50,7 +50,9 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
       await studentApi.updateProfile({
         fullName: profile.fullName,
         phone: profile.phone,
-        email: profile.email
+        email: profile.email,
+        dateOfBirth: profile.dateOfBirth,
+        identityCard: profile.identityCard,
       });
       toast.success("Cập nhật thông tin thành công!");
       setIsEditing(false);
@@ -180,6 +182,26 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
                     type="email"
                     value={profile.email}
                     onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Ngày sinh</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    value={profile.dateOfBirth ? profile.dateOfBirth.split('T')[0] : ''}
+                    onChange={(e) => setProfile({ ...profile, dateOfBirth: e.target.value + 'T00:00:00.000Z' })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="identityCard">Căn cước công dân</Label>
+                  <Input
+                    id="identityCard"
+                    type="text"
+                    value={profile.identityCard || ''}
+                    onChange={(e) => setProfile({ ...profile, identityCard: e.target.value })}
                   />
                 </div>
 

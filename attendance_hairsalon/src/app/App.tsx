@@ -11,6 +11,8 @@ import StudentManagement from "./components/admin/StudentManagement";
 import SessionManagement from "./components/admin/SessionManagement";
 import AttendanceViewer from "./components/admin/AttendanceViewer";
 import AdminLayout from "./components/admin/AdminLayout";
+import RegisterPage from "./components/RegisterPage";
+import ClassRegistrationPage from "./components/ClassRegistrationPage";
 import { Toaster } from "./components/ui/sonner";
 
 function App() {
@@ -50,6 +52,18 @@ function App() {
             path="/login"
             element={
               isLoggedIn && !isAdmin ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              isLoggedIn ? <Navigate to="/" /> : <RegisterPage onLogin={handleLogin} />
+            }
+          />
+          <Route
+            path="/class-registration"
+            element={
+              isLoggedIn ? <ClassRegistrationPage /> : <Navigate to="/login" />
             }
           />
           <Route

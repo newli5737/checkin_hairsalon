@@ -43,8 +43,16 @@ export class SessionController {
     @Get('sessions/today')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.STUDENT)
-    async getTodaySessions() {
-        return this.sessionService.getTodaySessions();
+    async getTodaySessions(@Request() req) {
+        const studentProfile = await this.sessionService['prisma'].studentProfile.findUnique({
+            where: { userId: req.user.userId },
+        });
+
+        if (!studentProfile) {
+            throw new Error('Student profile not found');
+        }
+
+        return this.sessionService.getTodaySessions(studentProfile.trainingClassId || undefined);
     }
 
     @Post('sessions/:id/register')

@@ -110,6 +110,26 @@ export class StudentService {
             updateData.phone = updateStudentDto.phone;
         }
 
+        if (updateStudentDto.dateOfBirth) {
+            updateData.dateOfBirth = updateStudentDto.dateOfBirth;
+        }
+
+        if (updateStudentDto.identityCard) {
+            updateData.identityCard = updateStudentDto.identityCard;
+        }
+
+        if (updateStudentDto.trainingClassId) {
+            updateData.trainingClassId = updateStudentDto.trainingClassId;
+        }
+
+        if (updateStudentDto.identityCardImage) {
+            const cccdUrl = await this.cloudinary.uploadBase64Image(
+                updateStudentDto.identityCardImage,
+                'identity_cards',
+            );
+            updateData.identityCardImage = cccdUrl;
+        }
+
         if (updateStudentDto.avatarBase64) {
             const avatarUrl = await this.cloudinary.uploadBase64Image(
                 updateStudentDto.avatarBase64,

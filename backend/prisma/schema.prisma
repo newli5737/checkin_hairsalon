@@ -41,16 +41,47 @@ model StudentProfile {
   phone          String
   avatarUrl      String?
   faceRegistered Boolean  @default(false)
-  
+  identityCard   String?
+  identityCardImage String?
+  dateOfBirth    DateTime?
+  trainingClassId String?
+
   user                User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingClass       TrainingClass?         @relation(fields: [trainingClassId], references: [id])
   sessionRegistrations SessionRegistration[]
   attendances         Attendance[]
   
   @@map("student_profiles")
 }
 
+enum ClassType {
+  NAIL
+  HAIR
+  TATTOO
+}
+
+enum ClassLocation {
+  CAN_THO
+  HO_CHI_MINH
+}
+
+model TrainingClass {
+  id        String        @id @default(uuid())
+  code      String        @unique // 20251, 20252
+  name      String
+  type      ClassType
+  location  ClassLocation
+  createdAt DateTime      @default(now())
+
+  students  StudentProfile[]
+  sessions  ClassSession[]
+
+  @@map("training_classes")
+}
+
 model ClassSession {
   id                   String   @id @default(uuid())
+  trainingClassId      String?
   date                 String   // Format: YYYY-MM-DD
   name                 String   // Ca 1, Ca 2, Ca 3
   startTime            String   // Format: HH:mm
@@ -59,6 +90,7 @@ model ClassSession {
   isDeleted            Boolean  @default(false)
   createdAt            DateTime @default(now())
   
+  trainingClass        TrainingClass? @relation(fields: [trainingClassId], references: [id], onDelete: Cascade)
   sessionRegistrations SessionRegistration[]
   attendances          Attendance[]
   

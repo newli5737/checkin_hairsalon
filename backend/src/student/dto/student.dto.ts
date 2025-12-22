@@ -39,4 +39,20 @@ export class UpdateStudentDto {
     @IsOptional()
     @IsString()
     avatarBase64?: string;
+
+    @IsOptional()
+    @IsString()
+    identityCard?: string;
+
+    @IsOptional()
+    @IsString()
+    identityCardImage?: string;
+
+    @IsOptional()
+    // @IsDateString() // Optional validation
+    dateOfBirth?: string; // Receive as string, parse later or use Date if transformed
+
+    @IsOptional()
+    @IsString()
+    trainingClassId?: string;
 }
