@@ -10,6 +10,7 @@ import AdminDashboard from "./components/admin/AdminDashboard";
 import StudentManagement from "./components/admin/StudentManagement";
 import SessionManagement from "./components/admin/SessionManagement";
 import AttendanceViewer from "./components/admin/AttendanceViewer";
+import ClassManagement from "./components/admin/ClassManagement";
 import AdminLayout from "./components/admin/AdminLayout";
 import RegisterPage from "./components/RegisterPage";
 import ClassRegistrationPage from "./components/ClassRegistrationPage";
@@ -107,6 +108,7 @@ function App() {
           >
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="students" element={<StudentManagement />} />
+            <Route path="classes" element={<ClassManagement />} />
             <Route path="sessions" element={<SessionManagement />} />
             <Route path="attendance" element={<AttendanceViewer />} />
             {/* Redirect /admin to /admin/dashboard */}

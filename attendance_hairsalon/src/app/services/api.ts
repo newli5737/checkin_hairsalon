@@ -1,5 +1,5 @@
 // const API_BASE_URL = 'https://nose-clouds-stanford-eval.trycloudflare.com';
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8002';
 
 // Helper function to get auth token
 const getAuthToken = () => {
@@ -62,6 +62,19 @@ export const trainingClassApi = {
         return apiCall('/training-classes', {
             method: 'POST',
             body: JSON.stringify(data),
+        });
+    },
+
+    update: async (id: string, data: any) => {
+        return apiCall(`/training-classes/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+
+    remove: async (id: string) => {
+        return apiCall(`/training-classes/${id}`, {
+            method: 'DELETE',
         });
     },
 };

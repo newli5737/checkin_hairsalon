@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Calendar, ClipboardCheck, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, ClipboardCheck, LogOut, Menu, X, BookOpen } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
@@ -18,6 +18,7 @@ export default function AdminLayout({ onLogout }: AdminLayoutProps) {
 
     const navItems = [
         { path: "/admin/dashboard", icon: LayoutDashboard, label: "Tổng quan" },
+        { path: "/admin/classes", icon: BookOpen, label: "Quản lý lớp học" },
         { path: "/admin/students", icon: Users, label: "Quản lý học viên" },
         { path: "/admin/sessions", icon: Calendar, label: "Quản lý ca học" },
         { path: "/admin/attendance", icon: ClipboardCheck, label: "Xem điểm danh" },

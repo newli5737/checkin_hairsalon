@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, UseGuards, Param } from '@nestjs/common';
 import { TrainingClassService } from './training-class.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -24,5 +24,19 @@ export class TrainingClassController {
     @Get(':id')
     async findOne(@Param('id') id: string) {
         return this.trainingClassService.findOne(id);
+    }
+
+    @Put(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN)
+    async update(@Param('id') id: string, @Body() updateDto: any) {
+        return this.trainingClassService.update(id, updateDto);
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN)
+    async remove(@Param('id') id: string) {
+        return this.trainingClassService.remove(id);
     }
 }

@@ -67,10 +67,11 @@ enum ClassLocation {
 
 model TrainingClass {
   id        String        @id @default(uuid())
-  code      String        @unique // 20251, 20252
+  code      String        @unique // Auto-generated
   name      String
   type      ClassType
   location  ClassLocation
+  year      String        @default("2025") // e.g., "2025" or "2024-2025"
   createdAt DateTime      @default(now())
 
   students  StudentProfile[]
