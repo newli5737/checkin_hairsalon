@@ -94,8 +94,8 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
         setUploadingAvatar(true);
         const url = await uploadToCloudinary(file);
         // Update profile with new avatar URL
-        await studentApi.updateProfile({ ...profile, avatarUrl: url });
-        setProfile({ ...profile, avatarUrl: url });
+        await studentApi.updateProfile({ avatarUrl: url });
+        setProfile((prev: any) => ({ ...prev, avatarUrl: url }));
         toast.success("Cập nhật ảnh đại diện thành công");
       } catch (error: any) {
         toast.error("Lỗi khi tải ảnh: " + error.message);

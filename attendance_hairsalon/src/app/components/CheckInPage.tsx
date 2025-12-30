@@ -48,7 +48,6 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [faceImageUrl, setFaceImageUrl] = useState<string | null>(null);
   const [checkInLoading, setCheckInLoading] = useState(false);
 
   useEffect(() => {
@@ -162,20 +161,9 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
           setCameraStream(null);
         }
 
-        // Upload to Cloudinary
-        setFaceStatus("processing");
-        try {
-          const file = dataURLtoFile(imageData, "check-in-face.jpg");
-          const url = await uploadToCloudinary(file);
-          setFaceImageUrl(url);
-          setFaceStatus("success");
-          toast.success("Ảnh đã được tải lên");
-          setTimeout(() => setStep(2), 1000);
-        } catch (error) {
-          console.error(error);
-          setFaceStatus("error");
-          toast.error("Lỗi khi tải ảnh lên, vui lòng thử lại");
-        }
+        // Skip Cloudinary upload - send base64 to backend
+        setFaceStatus("success");
+        setTimeout(() => setStep(2), 500);
       }
     }
   };
@@ -216,20 +204,21 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
   }, [step, gpsStatus]);
 
   const submitCheckIn = async () => {
-    if (!sessionId || !faceImageUrl || !location) {
+    if (!sessionId || !capturedImage || !location) {
       toast.error("Thiếu thông tin điểm danh");
       return;
     }
 
+    const checkInData = {
+      sessionId,
+      imageBase64: capturedImage,
+      lat: location.lat,
+      lng: location.lng
+    };
+
     setCheckInLoading(true);
     try {
-      await attendanceApi.checkIn({
-        sessionId,
-        faceImageUrl,
-        latitude: location.lat,
-        longitude: location.lng,
-        deviceInfo: navigator.userAgent
-      });
+      await attendanceApi.checkIn(checkInData);
 
       toast.success("Điểm danh thành công!");
       setTimeout(() => {
