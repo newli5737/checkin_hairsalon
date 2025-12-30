@@ -31,9 +31,12 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Verification States
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  // Camera & Photo States
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showOptionModal, setShowOptionModal] = useState(false);
+  const [photoAction, setPhotoAction] = useState<'avatar' | 'verification' | null>(null);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
+
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -52,10 +55,10 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
 
   // Cleanup camera when modal closes
   useEffect(() => {
-    if (!showVerifyModal && cameraStream) {
+    if (!showCameraModal && cameraStream) {
       stopCamera();
     }
-  }, [showVerifyModal]);
+  }, [showCameraModal]);
 
   const fetchProfile = async () => {
     try {
@@ -151,31 +154,46 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
     return new File([u8arr], filename, { type: mime });
   };
 
-  const handleVerify = async () => {
-    if (!capturedImage) return;
+  const handleProcessPhoto = async () => {
+    if (!capturedImage || !photoAction) return;
 
-    setVerifying(true);
+    setProcessingPhoto(true);
     try {
-      // 1. Upload selfie to Cloudinary
-      const file = dataURLtoFile(capturedImage, "verification-selfie.jpg");
-      const selfieUrl = await uploadToCloudinary(file);
+      const file = dataURLtoFile(capturedImage, "photo.jpg");
+      const url = await uploadToCloudinary(file);
 
-      // 2. Call verification API
-      const result = await faceVerificationApi.verify(selfieUrl);
-
-      if (result.verified) {
-        toast.success(result.message);
-        setProfile((prev: any) => ({ ...prev, faceRegistered: true }));
-        setShowVerifyModal(false);
-      } else {
-        toast.error(result.message || "Xác thực thất bại, vui lòng thử lại");
+      if (photoAction === 'avatar') {
+        // Update Avatar
+        await studentApi.updateProfile({ avatarUrl: url });
+        setProfile((prev: any) => ({ ...prev, avatarUrl: url }));
+        toast.success("Cập nhật ảnh đại diện thành công");
+        setShowCameraModal(false);
+        setPhotoAction(null);
+      } else if (photoAction === 'verification') {
+        // Verify Face
+        const result = await faceVerificationApi.verify(url);
+        if (result.verified) {
+          toast.success(result.message);
+          setProfile((prev: any) => ({ ...prev, faceRegistered: true }));
+          setShowCameraModal(false);
+          setPhotoAction(null);
+        } else {
+          toast.error(result.message || "Xác thực thất bại, vui lòng thử lại");
+        }
       }
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Có lỗi xảy ra khi xác thực");
+      toast.error(error.message || "Có lỗi xảy ra");
     } finally {
-      setVerifying(false);
+      setProcessingPhoto(false);
     }
+  };
+
+  const openCamera = (action: 'avatar' | 'verification') => {
+    setPhotoAction(action);
+    setShowOptionModal(false);
+    setShowCameraModal(true);
+    startCamera();
   };
 
   if (loading) {
@@ -219,10 +237,10 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
                   size="icon"
                   variant="secondary"
                   className="absolute bottom-0 right-0 rounded-full shadow-md"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setShowOptionModal(true)}
                   disabled={uploadingAvatar}
                 >
-                  {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                  <Camera className="w-4 h-4" />
                 </Button>
                 <input
                   type="file"
@@ -409,10 +427,7 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
             {!profile.faceRegistered && (
               <Button
                 className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700"
-                onClick={() => {
-                  setShowVerifyModal(true);
-                  startCamera();
-                }}
+                onClick={() => openCamera('verification')}
               >
                 <ScanFace className="w-4 h-4 mr-2" />
                 Xác thực khuôn mặt ngay
@@ -426,17 +441,52 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
         </Card>
       </div>
 
-      {/* Verification Modal */}
-      <Dialog open={showVerifyModal} onOpenChange={(open) => {
+      {/* Option Modal */}
+      <Dialog open={showOptionModal} onOpenChange={setShowOptionModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cập nhật ảnh đại diện</DialogTitle>
+            <DialogDescription>
+              Chọn phương thức cập nhật ảnh của bạn
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 pt-4">
+            <Button
+              variant="outline"
+              className="h-24 flex flex-col gap-2"
+              onClick={() => {
+                setShowOptionModal(false);
+                fileInputRef.current?.click();
+              }}
+            >
+              <Upload className="w-8 h-8 opacity-50" />
+              Tải ảnh lên
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex flex-col gap-2"
+              onClick={() => openCamera('avatar')}
+            >
+              <Camera className="w-8 h-8 opacity-50" />
+              Chụp ảnh
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generic Camera Modal */}
+      <Dialog open={showCameraModal} onOpenChange={(open) => {
         if (!open) stopCamera();
-        setShowVerifyModal(open);
+        setShowCameraModal(open);
         setCapturedImage(null);
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Xác thực khuôn mặt</DialogTitle>
+            <DialogTitle>
+              {photoAction === 'avatar' ? 'Chụp ảnh đại diện' : 'Xác thực khuôn mặt'}
+            </DialogTitle>
             <DialogDescription>
-              Vui lòng giữ khuôn mặt ở giữa khung hình để xác thực
+              Vui lòng giữ khuôn mặt ở giữa khung hình
             </DialogDescription>
           </DialogHeader>
 
@@ -474,24 +524,24 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
                     variant="outline"
                     onClick={() => setCapturedImage(null)}
                     className="flex-1"
-                    disabled={verifying}
+                    disabled={processingPhoto}
                   >
                     Chụp lại
                   </Button>
                   <Button
-                    onClick={handleVerify}
+                    onClick={handleProcessPhoto}
                     className="flex-1"
-                    disabled={verifying}
+                    disabled={processingPhoto}
                   >
-                    {verifying ? (
+                    {processingPhoto ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Đang xác thực...
+                        Đang xử lý...
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Xác nhận
+                        {photoAction === 'avatar' ? 'Lưu ảnh' : 'Xác nhận'}
                       </>
                     )}
                   </Button>

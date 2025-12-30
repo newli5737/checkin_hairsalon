@@ -10,6 +10,6 @@ export class FaceVerificationController {
 
     @Post('verify')
     async verify(@Req() req, @Body() dto: VerifyFaceDto) {
-        return this.faceVerificationService.verifyIdentity(req.user.id, dto);
+        return this.faceVerificationService.verifyIdentity(req.user.userId, dto);
     }
 }
