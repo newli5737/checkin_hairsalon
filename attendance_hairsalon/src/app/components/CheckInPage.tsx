@@ -50,6 +50,10 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [checkInLoading, setCheckInLoading] = useState(false);
 
+  // Check-in/Check-out State
+  const [attendanceMode, setAttendanceMode] = useState<'check-in' | 'check-out' | 'done'>('check-in');
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
   useEffect(() => {
     fetchMyClasses();
   }, []);
@@ -59,6 +63,36 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
       fetchSessions();
     }
   }, [selectedClassId, sessionId]);
+
+  useEffect(() => {
+    if (sessionId) {
+      checkAttendanceStatus();
+    }
+  }, [sessionId]);
+
+  const checkAttendanceStatus = async () => {
+    if (!sessionId) return;
+
+    setCheckingStatus(true);
+    try {
+      const history = await attendanceApi.getMyHistory();
+      const currentSessionRecord = history.find((r: any) => r.sessionId === sessionId);
+
+      if (currentSessionRecord) {
+        if (currentSessionRecord.checkOutTime) {
+          setAttendanceMode('done');
+        } else {
+          setAttendanceMode('check-out');
+        }
+      } else {
+        setAttendanceMode('check-in');
+      }
+    } catch (error) {
+      console.error("Error checking status:", error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
 
   const fetchMyClasses = async () => {
     try {
@@ -218,14 +252,19 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
 
     setCheckInLoading(true);
     try {
-      await attendanceApi.checkIn(checkInData);
+      if (attendanceMode === 'check-out') {
+        await attendanceApi.checkOut(checkInData);
+        toast.success("Check-out thành công!");
+      } else {
+        await attendanceApi.checkIn(checkInData);
+        toast.success("Điểm danh thành công!");
+      }
 
-      toast.success("Điểm danh thành công!");
       setTimeout(() => {
         navigate("/");
       }, 1500);
     } catch (error: any) {
-      toast.error(error.message || "Điểm danh thất bại");
+      toast.error(error.message || "Thao tác thất bại");
       // If failed, reset to step 1 to retake photo
       setCapturedImage(null);
       setFaceStatus("idle");
@@ -250,7 +289,9 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
         {/* Progress */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xl font-semibold">Điểm danh</h2>
+            <h2 className="text-xl font-semibold">
+              {attendanceMode === 'check-out' ? 'Check-out' : 'Điểm danh (Check-in)'}
+            </h2>
             <span className="text-sm text-gray-600">
               {step === 0 ? "Chọn ca học" : `Bước ${step}/3`}
             </span>
@@ -327,7 +368,9 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                               {session.startTime} - {session.endTime}
                             </p>
                           </div>
-                          <Button size="sm" variant="outline">Chọn</Button>
+                          <Button size="sm" variant="outline">
+                            {attendanceMode === 'check-out' ? 'Check Out' : 'Chọn'}
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -347,11 +390,31 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                 <CardTitle>Bước 1: Chụp ảnh khuôn mặt</CardTitle>
               </div>
               <CardDescription>
-                Vui lòng chụp ảnh khuôn mặt của bạn để xác thực
+                {attendanceMode === 'check-out'
+                  ? "Chụp ảnh để xác nhận ra về (Check-out)"
+                  : "Vui lòng chụp ảnh khuôn mặt của bạn để xác thực (Check-in)"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!capturedImage ? (
+              {checkingStatus ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+                  <p>Đang kiểm tra trạng thái điểm danh...</p>
+                </div>
+              ) : attendanceMode === 'done' ? (
+                <div className="text-center py-6">
+                  <div className="bg-green-100 text-green-800 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-green-700 mb-2">Đã hoàn thành!</h3>
+                  <p className="text-gray-600 mb-6">
+                    Bạn đã hoàn thành Check-in và Check-out cho ca học này.
+                  </p>
+                  <Button onClick={() => navigate("/")} variant="outline">
+                    Quay về trang chủ
+                  </Button>
+                </div>
+              ) : !capturedImage ? (
                 <div className="space-y-4">
                   <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
                     <video
@@ -496,10 +559,10 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <CardTitle>Bước 3: Xác nhận điểm danh</CardTitle>
+                <CardTitle>Bước 3: Xác nhận {attendanceMode === 'check-out' ? 'Check-out' : 'Check-in'}</CardTitle>
               </div>
               <CardDescription>
-                Gửi thông tin điểm danh lên hệ thống
+                Gửi thông tin lên hệ thống
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -531,7 +594,7 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5 mr-2" />
-                      Gửi điểm danh
+                      Gửi {attendanceMode === 'check-out' ? 'Check-out' : 'Check-in'}
                     </>
                   )}
                 </Button>
