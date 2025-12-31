@@ -105,6 +105,31 @@ export default function AttendanceViewer() {
         }
     };
 
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa lượt điểm danh này?")) return;
+        try {
+            await attendanceApi.delete(id);
+            toast.success("Đã xóa thành công");
+            loadAttendances();
+        } catch (error: any) {
+            toast.error(error.message || "Xóa thất bại");
+        }
+    };
+
+    const ImagePreview = ({ src, alt }: { src?: string, alt: string }) => {
+        if (!src) return <span className="text-gray-400 text-xs">Không có ảnh</span>;
+        return (
+            <div className="relative group">
+                <img
+                    src={src}
+                    alt={alt}
+                    className="w-12 h-12 object-cover rounded-md border cursor-pointer hover:scale-110 transition-transform"
+                    onClick={() => window.open(src, '_blank')}
+                />
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -190,10 +215,13 @@ export default function AttendanceViewer() {
                                         <TableRow>
                                             <TableHead>Mã HV</TableHead>
                                             <TableHead>Họ tên</TableHead>
+                                            <TableHead>Ảnh Check-in</TableHead>
                                             <TableHead>Check-in</TableHead>
+                                            <TableHead>Ảnh Check-out</TableHead>
                                             <TableHead>Check-out</TableHead>
                                             <TableHead className="hidden md:table-cell text-center">Face Score</TableHead>
                                             <TableHead>Trạng thái</TableHead>
+                                            <TableHead>Hành động</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -203,6 +231,9 @@ export default function AttendanceViewer() {
                                                     {attendance.student.studentCode}
                                                 </TableCell>
                                                 <TableCell>{attendance.student.fullName}</TableCell>
+                                                <TableCell>
+                                                    <ImagePreview src={attendance.checkInImageUrl} alt="Check-in" />
+                                                </TableCell>
                                                 <TableCell>
                                                     {attendance.checkInTime ? (
                                                         <div className="flex flex-col">
@@ -217,6 +248,9 @@ export default function AttendanceViewer() {
                                                             )}
                                                         </div>
                                                     ) : "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <ImagePreview src={attendance.checkOutImageUrl} alt="Check-out" />
                                                 </TableCell>
                                                 <TableCell>
                                                     {attendance.checkOutTime ? (
@@ -243,6 +277,16 @@ export default function AttendanceViewer() {
                                                     ) : "-"}
                                                 </TableCell>
                                                 <TableCell>{getStatusBadge(attendance.status)}</TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => handleDelete(attendance.id)}
+                                                    >
+                                                        Xóa
+                                                    </Button>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>

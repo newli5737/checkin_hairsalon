@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { CheckInDto, CheckOutDto } from './dto/attendance.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,6 +46,13 @@ export class AttendanceController {
         @Query('sessionId') sessionId?: string,
     ) {
         return this.attendanceService.getAttendanceRecords(date, sessionId);
+    }
+
+    @Delete('admin/attendance/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.ADMIN)
+    async deleteAttendance(@Param('id') id: string) {
+        return this.attendanceService.deleteAttendance(id);
     }
 
     @Get('student/attendance')

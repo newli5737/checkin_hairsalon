@@ -125,10 +125,12 @@ model Attendance {
   checkInLat        Float?
   checkInLng        Float?
   checkInFaceScore  Float?
+  checkInImageUrl   String?
   checkOutTime      DateTime?
   checkOutLat       Float?
   checkOutLng       Float?
   checkOutFaceScore Float?
+  checkOutImageUrl  String?
   status            AttendanceStatus  @default(ABSENT)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt

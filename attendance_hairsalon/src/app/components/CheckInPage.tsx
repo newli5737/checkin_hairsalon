@@ -209,20 +209,8 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
         (error) => {
           console.error(error);
 
-          if (gpsRetryCount < 1) { // Allow 1 retry (total 2 tries)
-            setGpsRetryCount(prev => prev + 1);
-            toast.error("Không thể lấy vị trí, đang thử lại...");
-            setTimeout(() => getLocation(), 1000); // Retry after 1s
-          } else {
-            // Check if user denied permission or timeout, but ultimately fallback
-            console.warn("Retries exhausted, using null location");
-            toast.warning("Không thể lấy chính xác vị trí, sẽ sử dụng vị trí mặc định");
-
-            // Set dummy location to allow proceed
-            const defaultLoc = { lat: 0, lng: 0, accuracy: 0 };
-            setLocation(defaultLoc);
-            setGpsStatus("success"); // Mark as success to proceed flow
-          }
+          setGpsStatus("error");
+          toast.error("Không thể lấy vị trí: " + error.message);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
@@ -230,6 +218,13 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
       setGpsStatus("error");
       toast.error("Trình duyệt không hỗ trợ Geolocation");
     }
+  };
+
+  const skipLocation = () => {
+    const defaultLoc = { lat: 0, lng: 0, accuracy: 0 };
+    setLocation(defaultLoc);
+    setGpsStatus("success");
+    toast.warning("Đã bỏ qua xác định vị trí");
   };
 
   // Auto advance from step 2 if location success
@@ -540,9 +535,14 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
               )}
 
               {gpsStatus === "error" && (
-                <Button onClick={getLocation} variant="outline" className="w-full">
-                  Thử lại
-                </Button>
+                <div className="flex gap-3">
+                  <Button onClick={getLocation} variant="outline" className="flex-1">
+                    Thử lại
+                  </Button>
+                  <Button onClick={skipLocation} variant="secondary" className="flex-1 text-orange-600 bg-orange-50 hover:bg-orange-100">
+                    Bỏ qua (Tiếp tục)
+                  </Button>
+                </div>
               )}
 
               {gpsStatus === "idle" && (

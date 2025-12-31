@@ -480,7 +480,7 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
         setShowCameraModal(open);
         setCapturedImage(null);
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-4xl w-[95vw]">
           <DialogHeader>
             <DialogTitle>
               {photoAction === 'avatar' ? 'Chụp ảnh đại diện' : 'Xác thực khuôn mặt'}

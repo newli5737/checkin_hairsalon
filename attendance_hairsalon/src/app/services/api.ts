@@ -186,6 +186,12 @@ export const attendanceApi = {
     getMyHistory: async () => {
         return apiCall('/student/attendance');
     },
+
+    delete: async (id: string) => {
+        return apiCall(`/admin/attendance/${id}`, {
+            method: 'DELETE',
+        });
+    },
 };
 
 // Enrollment API

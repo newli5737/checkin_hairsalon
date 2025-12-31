@@ -67,12 +67,6 @@ export class FaceVerificationService {
             throw new HttpException('Student has no avatar registered', HttpStatus.BAD_REQUEST);
         }
 
-        // 2. Upload Base64 to Cloudinary to get URL (or temp URL)
-        // Note: For speed, we might want to send base64 directly to Python if supported.
-        // But current Python API expects URL. So we upload.
-        // This might be slow for check-in. Ideally Python API should accept Base64.
-        // But for now, let's stick to the URL contract.
-
         try {
             const checkInImageUrl = await this.cloudinary.uploadBase64Image(imageBase64, 'attendance_checkins');
 
@@ -81,13 +75,15 @@ export class FaceVerificationService {
 
             return {
                 matched: result.verified,
-                score: result.similarity
+                score: result.similarity,
+                imageUrl: checkInImageUrl
             };
         } catch (error) {
             console.error('Attendance verification failed:', error);
             return {
                 matched: false,
-                score: 0
+                score: 0,
+                imageUrl: null
             };
         }
     }

@@ -66,6 +66,7 @@ export class AttendanceService {
                     checkInLat: checkInDto.lat,
                     checkInLng: checkInDto.lng,
                     checkInFaceScore: faceResult.score,
+                    checkInImageUrl: faceResult.imageUrl,
                     status,
                 },
             });
@@ -79,6 +80,7 @@ export class AttendanceService {
                     checkInLat: checkInDto.lat,
                     checkInLng: checkInDto.lng,
                     checkInFaceScore: faceResult.score,
+                    checkInImageUrl: faceResult.imageUrl,
                     status,
                 },
             });
@@ -130,7 +132,14 @@ export class AttendanceService {
                 checkOutLat: checkOutDto.lat,
                 checkOutLng: checkOutDto.lng,
                 checkOutFaceScore: faceResult.score,
+                checkOutImageUrl: faceResult.imageUrl,
             },
+        });
+    }
+
+    async deleteAttendance(id: string) {
+        return this.prisma.attendance.delete({
+            where: { id },
         });
     }
 
