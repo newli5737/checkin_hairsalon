@@ -56,5 +56,12 @@ export class UpdateStudentDto {
     // @IsDateString() // Optional validation
     dateOfBirth?: string; // Receive as string, parse later or use Date if transformed
 
+    @IsOptional()
+    @IsEmail({}, { message: 'Email không hợp lệ' })
+    email?: string;
 
+    @IsOptional()
+    @IsString()
+    @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })
+    password?: string;
 }

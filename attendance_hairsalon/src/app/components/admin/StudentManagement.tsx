@@ -115,7 +115,13 @@ export default function StudentManagement() {
                 const updateData: any = {
                     fullName: submitData.fullName,
                     phone: submitData.phone,
+                    email: submitData.email,
                 };
+
+                // Only include password if it has a value
+                if (submitData.password && submitData.password.trim() !== '') {
+                    updateData.password = submitData.password;
+                }
 
                 // Only include avatarUrl if it has a value
                 if (submitData.avatarUrl && submitData.avatarUrl.trim() !== '') {
@@ -172,50 +178,55 @@ export default function StudentManagement() {
 
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 {!editingStudent && (
-                                    <>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="studentCode">Mã học viên *</Label>
-                                            <Input
-                                                id="studentCode"
-                                                value={formData.studentCode}
-                                                onChange={(e) =>
-                                                    setFormData({ ...formData, studentCode: e.target.value })
-                                                }
-                                                required
-                                                placeholder="ST001"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="email">Email *</Label>
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={(e) =>
-                                                    setFormData({ ...formData, email: e.target.value })
-                                                }
-                                                required
-                                                placeholder="student@example.com"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="password">Mật khẩu *</Label>
-                                            <Input
-                                                id="password"
-                                                type="password"
-                                                value={formData.password}
-                                                onChange={(e) =>
-                                                    setFormData({ ...formData, password: e.target.value })
-                                                }
-                                                required
-                                                minLength={6}
-                                                placeholder="Tối thiểu 6 ký tự"
-                                            />
-                                        </div>
-                                    </>
+                                    <div className="p-3 bg-amber-50 text-amber-700 text-xs rounded-md border border-amber-200">
+                                        Mã học viên sẽ được hệ thống tự động sinh theo dạng SXXXX nếu để trống hoặc bạn có thể nhập thủ công.
+                                    </div>
                                 )}
+                                <div className="space-y-2">
+                                    <Label htmlFor="studentCode">Mã học viên *</Label>
+                                    <Input
+                                        id="studentCode"
+                                        value={formData.studentCode}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, studentCode: e.target.value })
+                                        }
+                                        required
+                                        disabled={!!editingStudent}
+                                        className={editingStudent ? "bg-gray-100" : ""}
+                                        placeholder="ST001"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email *</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, email: e.target.value })
+                                        }
+                                        required
+                                        placeholder="student@example.com"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">
+                                        {editingStudent ? "Mật khẩu mới (Để trống nếu không đổi)" : "Mật khẩu *"}
+                                    </Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, password: e.target.value })
+                                        }
+                                        required={!editingStudent}
+                                        minLength={6}
+                                        placeholder={editingStudent ? "Nhập mật khẩu mới" : "Tối thiểu 6 ký tự"}
+                                    />
+                                </div>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="fullName">Họ tên *</Label>

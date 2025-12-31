@@ -120,7 +120,6 @@ export class StudentService {
             updateData.identityCardImage = cccdUrl;
         }
 
-        // Handle avatar update - support both direct URL and base64
         if (updateStudentDto.avatarUrl) {
             // Direct URL provided (e.g., from Cloudinary upload in frontend)
             updateData.avatarUrl = updateStudentDto.avatarUrl;
@@ -134,6 +133,35 @@ export class StudentService {
 
             // Auto-register face when avatar is uploaded
             updateData.faceRegistered = true;
+        }
+
+        // Handle User-specific fields (Email, Password)
+        if (updateStudentDto.email || updateStudentDto.password) {
+            const userUpdateData: any = {};
+
+            if (updateStudentDto.email) {
+                // Check if email already exists for another user
+                const existingUser = await this.prisma.user.findFirst({
+                    where: {
+                        email: updateStudentDto.email,
+                        NOT: { id: student.userId }
+                    },
+                });
+
+                if (existingUser) {
+                    throw new ConflictException('Email đã tồn tại');
+                }
+                userUpdateData.email = updateStudentDto.email;
+            }
+
+            if (updateStudentDto.password) {
+                userUpdateData.passwordHash = await this.authService.hashPassword(updateStudentDto.password);
+            }
+
+            await this.prisma.user.update({
+                where: { id: student.userId },
+                data: userUpdateData,
+            });
         }
 
         await this.prisma.studentProfile.update({
