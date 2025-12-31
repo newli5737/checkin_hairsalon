@@ -1,12 +1,11 @@
-const API_BASE_URL = 'https://represent-dylan-themselves-inch.trycloudflare.com';
+const API_BASE_URL = 'https://given-qualities-harrison-take.trycloudflare.com';
+
 // const API_BASE_URL = 'http://localhost:8002';
 
-// Helper function to get auth token
 const getAuthToken = () => {
     return localStorage.getItem('token');
 };
 
-// Helper function for API calls
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     const token = getAuthToken();
     const headers: HeadersInit = {
