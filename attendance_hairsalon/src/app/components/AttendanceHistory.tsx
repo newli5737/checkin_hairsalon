@@ -31,12 +31,16 @@ interface AttendanceRecord {
   date: string; // Formatted string
   checkInTime: string;
   checkOutTime: string;
-  status: "PRESENT" | "LATE" | "ABSENT";
+  status: "PRESENT" | "LATE" | "ABSENT" | "LEFT_EARLY";
   note?: string;
   checkInLat?: number;
   checkInLng?: number;
+  checkInFaceScore?: number;
+  checkInImageUrl?: string;
   checkOutLat?: number;
   checkOutLng?: number;
+  checkOutFaceScore?: number;
+  checkOutImageUrl?: string;
   sessionName?: string;
   trainingClassId?: string;
 }
@@ -93,10 +97,8 @@ export default function AttendanceHistory({ onLogout }: AttendanceHistoryProps) 
       const absentDates: Date[] = [];
 
       const formattedData = data.map((item: any) => {
-        // Use session.date (e.g. "2025-12-18") as the base date
         const dateObj = new Date(item.session.date);
 
-        // Categorize for calendar modifiers
         if (item.status === 'PRESENT') presentDates.push(dateObj);
         else if (item.status === 'LATE') lateDates.push(dateObj);
         else if (item.status === 'ABSENT') absentDates.push(dateObj);
@@ -106,9 +108,7 @@ export default function AttendanceHistory({ onLogout }: AttendanceHistoryProps) 
         if (item.checkInTime) {
           try {
             checkInStr = new Date(item.checkInTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-          } catch (e) {
-            console.error("Invalid checkInTime:", item.checkInTime);
-          }
+          } catch (e) { console.error(e); }
         }
 
         // Format Check-out Time
@@ -116,9 +116,7 @@ export default function AttendanceHistory({ onLogout }: AttendanceHistoryProps) 
         if (item.checkOutTime) {
           try {
             checkOutStr = new Date(item.checkOutTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-          } catch (e) {
-            console.error("Invalid checkOutTime:", item.checkOutTime);
-          }
+          } catch (e) { console.error(e); }
         }
 
         return {
@@ -131,8 +129,12 @@ export default function AttendanceHistory({ onLogout }: AttendanceHistoryProps) 
           note: item.notes,
           checkInLat: item.checkInLat,
           checkInLng: item.checkInLng,
+          checkInFaceScore: item.checkInFaceScore,
+          checkInImageUrl: item.checkInImageUrl,
           checkOutLat: item.checkOutLat,
           checkOutLng: item.checkOutLng,
+          checkOutFaceScore: item.checkOutFaceScore,
+          checkOutImageUrl: item.checkOutImageUrl,
           sessionName: item.session.name,
           trainingClassId: item.session.trainingClassId
         };
@@ -161,6 +163,8 @@ export default function AttendanceHistory({ onLogout }: AttendanceHistoryProps) 
         return <Badge className="bg-orange-500 hover:bg-orange-600">Đi muộn</Badge>;
       case "ABSENT":
         return <Badge variant="destructive">Vắng mặt</Badge>;
+      case "LEFT_EARLY":
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Về sớm</Badge>;
       default:
         return <Badge variant="outline">Không xác định</Badge>;
     }
@@ -312,47 +316,86 @@ export default function AttendanceHistory({ onLogout }: AttendanceHistoryProps) 
                 {selectedRecords.map((record) => (
                   <Card key={record.id} className="border-l-4 border-l-indigo-500 shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="p-6">
-                      <div className="flex flex-col sm:flex-row justify-between gap-4">
-                        <div className="space-y-4 flex-1">
-                          <div>
-                            <h4 className="text-lg font-bold text-gray-900 mb-2">{record.sessionName || "Ca học"}</h4>
+                      <div className="flex flex-col gap-4">
+                        {/* Header: Session Name + Status */}
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-lg font-bold text-gray-900">{record.sessionName || "Ca học"}</h4>
+                          {getStatusBadge(record.status)}
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                              {/* Check In Info */}
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 text-green-700 font-medium text-sm">
-                                  <LogIn className="w-4 h-4" /> Check-in
-                                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-gray-100">
+                          {/* Check In Column */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-green-700 font-bold border-b pb-2">
+                              <LogIn className="w-5 h-5" /> CHECK-IN
+                            </div>
+                            <div className="flex gap-4">
+                              {/* Image */}
+                              <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border">
+                                {record.checkInImageUrl ? (
+                                  <img src={record.checkInImageUrl} alt="Check-in" className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform" onClick={() => window.open(record.checkInImageUrl, '_blank')} />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Img</div>
+                                )}
+                              </div>
+                              <div className="space-y-1 flex-1">
                                 <div className="text-2xl font-bold text-gray-800">{record.checkInTime}</div>
                                 <div className="flex items-center gap-1 text-xs text-gray-500">
                                   <MapPin className="w-3 h-3" />
-                                  {record.checkInLat ? `${record.checkInLat.toFixed(4)}, ${record.checkInLng?.toFixed(4)}` : "Không có vị trí"}
+                                  {record.checkInLat ? (
+                                    <a href={`https://www.google.com/maps?q=${record.checkInLat},${record.checkInLng}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 underline">
+                                      Xem vị trí
+                                    </a>
+                                  ) : "Không có vị trí"}
                                 </div>
+                                {record.checkInFaceScore !== undefined && (
+                                  <Badge variant="outline" className={record.checkInFaceScore > 0.9 ? "text-green-600 bg-green-50" : "text-yellow-600"}>
+                                    Score: {(record.checkInFaceScore * 100).toFixed(0)}%
+                                  </Badge>
+                                )}
                               </div>
+                            </div>
+                          </div>
 
-                              {/* Check Out Info */}
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 text-orange-700 font-medium text-sm">
-                                  <LogOut className="w-4 h-4" /> Check-out
-                                </div>
+                          {/* Check Out Column */}
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-orange-700 font-bold border-b pb-2">
+                              <LogOut className="w-5 h-5" /> CHECK-OUT
+                            </div>
+                            <div className="flex gap-4">
+                              {/* Image */}
+                              <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border">
+                                {record.checkOutImageUrl ? (
+                                  <img src={record.checkOutImageUrl} alt="Check-out" className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform" onClick={() => window.open(record.checkOutImageUrl, '_blank')} />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Img</div>
+                                )}
+                              </div>
+                              <div className="space-y-1 flex-1">
                                 <div className="text-2xl font-bold text-gray-800">{record.checkOutTime}</div>
                                 <div className="flex items-center gap-1 text-xs text-gray-500">
                                   <MapPin className="w-3 h-3" />
-                                  {record.checkOutLat ? `${record.checkOutLat.toFixed(4)}, ${record.checkOutLng?.toFixed(4)}` : "Không có vị trí"}
+                                  {record.checkOutLat ? (
+                                    <a href={`https://www.google.com/maps?q=${record.checkOutLat},${record.checkOutLng}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 underline">
+                                      Xem vị trí
+                                    </a>
+                                  ) : "Không có vị trí"}
                                 </div>
+                                {record.checkOutFaceScore !== undefined && (
+                                  <Badge variant="outline" className={record.checkOutFaceScore > 0.9 ? "text-green-600 bg-green-50" : "text-yellow-600"}>
+                                    Score: {(record.checkOutFaceScore * 100).toFixed(0)}%
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex flex-col items-end gap-3 pt-2 sm:pt-0 sm:border-l sm:pl-4 sm:border-gray-100">
-                          {getStatusBadge(record.status)}
-                          {record.note && (
-                            <span className="text-sm text-gray-500 italic max-w-[150px] text-right">
-                              "{record.note}"
-                            </span>
-                          )}
-                        </div>
+                        {record.note && (
+                          <div className="mt-2 pt-2 border-t border-dashed text-sm text-gray-500 italic">
+                            Ghi chú: "{record.note}"
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

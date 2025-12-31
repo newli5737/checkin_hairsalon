@@ -52,17 +52,29 @@ export class SessionController {
             throw new Error('Student profile not found');
         }
 
-        const enrollments = await this.sessionService['prisma'].classEnrollmentRequest.findMany({
+        // Get today's sessions that the student has REGISTERED for
+        const registrations = await this.sessionService['prisma'].sessionRegistration.findMany({
             where: {
                 studentId: studentProfile.id,
-                status: ClassEnrollmentStatus.APPROVED
             },
-            select: { trainingClassId: true }
+            include: {
+                session: true
+            }
         });
 
-        const classIds = enrollments.map(e => e.trainingClassId);
+        // Filter for sessions that are actually TODAY
+        const today = new Date().toISOString().split('T')[0];
+        const registeredSessionIds = registrations
+            .filter(r => r.session.date === today)
+            .map(r => r.sessionId);
 
-        return this.sessionService.getTodaySessions(classIds.length > 0 ? classIds : undefined);
+        if (registeredSessionIds.length === 0) {
+            return [];
+        }
+
+        // Reuse service method but filter by specific session IDs
+        const sessions = await this.sessionService.getTodaySessions();
+        return sessions.filter(s => registeredSessionIds.includes(s.id));
     }
 
     @Post('sessions/:id/register')
