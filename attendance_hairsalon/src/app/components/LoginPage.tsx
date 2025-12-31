@@ -136,7 +136,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900">Chào mừng trở lại! 👋</h2>
+            <h2 className="text-3xl font-bold text-gray-900">Chào mừng học viên</h2>
             <p className="text-gray-500 mt-2">Nhập email và mật khẩu để truy cập tài khoản của bạn</p>
           </div>
 
