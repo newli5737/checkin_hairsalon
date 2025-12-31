@@ -413,7 +413,7 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                 </div>
               ) : !capturedImage ? (
                 <div className="space-y-4">
-                  <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+                  <div className="relative aspect-[3/4] md:aspect-video bg-gray-900 rounded-lg overflow-hidden">
                     <video
                       ref={videoRef}
                       autoPlay
@@ -445,7 +445,7 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                  <div className="relative aspect-[3/4] md:aspect-video bg-gray-100 rounded-lg overflow-hidden">
                     <img
                       src={capturedImage}
                       alt="Captured face"
