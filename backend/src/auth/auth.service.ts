@@ -60,18 +60,21 @@ export class AuthService {
         });
 
         // Create empty StudentProfile linked to user
-        const lastStudent = await this.prisma.studentProfile.findFirst({
+        const profiles = await this.prisma.studentProfile.findMany({
             where: { studentCode: { startsWith: 'S' } },
-            orderBy: { studentCode: 'desc' },
+            select: { studentCode: true }
         });
 
-        let nextNumber = 1;
-        if (lastStudent && lastStudent.studentCode) {
-            const currentNumber = parseInt(lastStudent.studentCode.substring(1));
-            if (!isNaN(currentNumber)) {
-                nextNumber = currentNumber + 1;
+        let maxNumber = 0;
+        profiles.forEach(p => {
+            const numPart = p.studentCode.substring(1);
+            if (/^\d+$/.test(numPart)) {
+                const num = parseInt(numPart);
+                if (num > maxNumber) maxNumber = num;
             }
-        }
+        });
+
+        const nextNumber = maxNumber + 1;
 
         const studentCode = `S${nextNumber.toString().padStart(4, '0')}`;
 

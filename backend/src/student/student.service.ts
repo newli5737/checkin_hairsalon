@@ -24,12 +24,29 @@ export class StudentService {
             throw new ConflictException('Email đã tồn tại');
         }
 
-        const existingStudent = await this.prisma.studentProfile.findUnique({
-            where: { studentCode: createStudentDto.studentCode },
-        });
+        if (!createStudentDto.studentCode) {
+            const profiles = await this.prisma.studentProfile.findMany({
+                where: { studentCode: { startsWith: 'S' } },
+                select: { studentCode: true }
+            });
 
-        if (existingStudent) {
-            throw new ConflictException('Mã học viên đã tồn tại');
+            let maxNumber = 0;
+            profiles.forEach(p => {
+                const numPart = p.studentCode.substring(1);
+                if (/^\d+$/.test(numPart)) {
+                    const num = parseInt(numPart);
+                    if (num > maxNumber) maxNumber = num;
+                }
+            });
+            createStudentDto.studentCode = `S${(maxNumber + 1).toString().padStart(4, '0')}`;
+        } else {
+            const existingStudent = await this.prisma.studentProfile.findUnique({
+                where: { studentCode: createStudentDto.studentCode },
+            });
+
+            if (existingStudent) {
+                throw new ConflictException('Mã học viên đã tồn tại');
+            }
         }
 
         // Hash password

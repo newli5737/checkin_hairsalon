@@ -38,7 +38,7 @@ async function main() {
         update: {},
         create: {
             userId: studentUser.id,
-            studentCode: 'SV001',
+            studentCode: 'S0001',
             fullName: 'Nguyễn Văn An',
             phone: '0912345678',
             faceRegistered: false,
