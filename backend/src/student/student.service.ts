@@ -72,12 +72,16 @@ export class StudentService {
         });
 
         // Upload avatar if provided
+        let avatarUrl = createStudentDto.avatarUrl;
+
         if (createStudentDto.avatarBase64) {
-            const avatarUrl = await this.cloudinary.uploadBase64Image(
+            avatarUrl = await this.cloudinary.uploadBase64Image(
                 createStudentDto.avatarBase64,
                 'avatars',
             );
+        }
 
+        if (avatarUrl) {
             if (!user.studentProfile) {
                 throw new Error('Failed to create student profile');
             }
@@ -89,8 +93,6 @@ export class StudentService {
                     faceRegistered: true
                 },
             });
-
-
         }
 
         if (!user.studentProfile) {

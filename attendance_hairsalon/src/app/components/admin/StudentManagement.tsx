@@ -110,9 +110,16 @@ export default function StudentManagement() {
                 avatarUrl,
             };
 
-            // Xóa studentCode nếu rỗng (để backend tự sinh)
             if (!submitData.studentCode || submitData.studentCode.trim() === '') {
                 delete submitData.studentCode;
+            }
+
+            if (!submitData.avatarUrl || submitData.avatarUrl.trim() === '') {
+                delete submitData.avatarUrl;
+            }
+
+            if (!submitData.email || submitData.email.trim() === '') {
+                delete submitData.email;
             }
 
             if (editingStudent) {
@@ -202,18 +209,7 @@ export default function StudentManagement() {
                                     </div>
                                 )}
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email (Tùy chọn)</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, email: e.target.value })
-                                        }
-                                        placeholder="student@example.com"
-                                    />
-                                </div>
+
 
                                 <div className="space-y-2">
                                     <Label htmlFor="password">
@@ -255,6 +251,19 @@ export default function StudentManagement() {
                                         }
                                         required
                                         placeholder="0123456789"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email (Tùy chọn)</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, email: e.target.value })
+                                        }
+                                        placeholder="student@example.com"
                                     />
                                 </div>
 
