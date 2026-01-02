@@ -212,23 +212,6 @@ export default function StudentManagement() {
 
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="password">
-                                        {editingStudent ? "Mật khẩu mới (Để trống nếu không đổi)" : "Mật khẩu *"}
-                                    </Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, password: e.target.value })
-                                        }
-                                        required={!editingStudent}
-                                        minLength={6}
-                                        placeholder={editingStudent ? "Nhập mật khẩu mới" : "Tối thiểu 6 ký tự"}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
                                     <Label htmlFor="fullName">Họ tên *</Label>
                                     <Input
                                         id="fullName"
@@ -264,6 +247,23 @@ export default function StudentManagement() {
                                             setFormData({ ...formData, email: e.target.value })
                                         }
                                         placeholder="student@example.com"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">
+                                        {editingStudent ? "Mật khẩu mới (Để trống nếu không đổi)" : "Mật khẩu *"}
+                                    </Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, password: e.target.value })
+                                        }
+                                        required={!editingStudent}
+                                        minLength={6}
+                                        placeholder={editingStudent ? "Nhập mật khẩu mới" : "Tối thiểu 6 ký tự"}
                                     />
                                 </div>
 

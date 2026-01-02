@@ -94,7 +94,12 @@ export default function ClassManagement() {
     const handleAddSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await trainingClassApi.create(formData);
+            const payload = {
+                ...formData,
+                latitude: Number(formData.latitude),
+                longitude: Number(formData.longitude),
+            };
+            await trainingClassApi.create(payload);
             fetchClasses();
             setIsAddModalOpen(false);
             resetForm();
@@ -121,7 +126,12 @@ export default function ClassManagement() {
         e.preventDefault();
         if (!currentClass) return;
         try {
-            await trainingClassApi.update(currentClass.id, formData);
+            const payload = {
+                ...formData,
+                latitude: Number(formData.latitude),
+                longitude: Number(formData.longitude),
+            };
+            await trainingClassApi.update(currentClass.id, payload);
             fetchClasses();
             setIsEditModalOpen(false);
             resetForm();
@@ -378,6 +388,32 @@ export default function ClassManagement() {
                                 </Select>
                             </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="latitude">Vĩ độ (Latitude)</Label>
+                                <Input
+                                    id="latitude"
+                                    type="number"
+                                    step="any"
+                                    name="latitude"
+                                    value={formData.latitude}
+                                    onChange={handleInputChange}
+                                    placeholder="10.022098"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="longitude">Kinh độ (Longitude)</Label>
+                                <Input
+                                    id="longitude"
+                                    type="number"
+                                    step="any"
+                                    name="longitude"
+                                    value={formData.longitude}
+                                    onChange={handleInputChange}
+                                    placeholder="105.788826"
+                                />
+                            </div>
+                        </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
                                 Hủy
@@ -446,6 +482,32 @@ export default function ClassManagement() {
                                         <SelectItem value="HO_CHI_MINH">Hồ Chí Minh</SelectItem>
                                     </SelectContent>
                                 </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-latitude">Vĩ độ (Latitude)</Label>
+                                <Input
+                                    id="edit-latitude"
+                                    type="number"
+                                    step="any"
+                                    name="latitude"
+                                    value={formData.latitude}
+                                    onChange={handleInputChange}
+                                    placeholder="10.022098"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-longitude">Kinh độ (Longitude)</Label>
+                                <Input
+                                    id="edit-longitude"
+                                    type="number"
+                                    step="any"
+                                    name="longitude"
+                                    value={formData.longitude}
+                                    onChange={handleInputChange}
+                                    placeholder="105.788826"
+                                />
                             </div>
                         </div>
                         <DialogFooter>
