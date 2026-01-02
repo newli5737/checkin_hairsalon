@@ -53,17 +53,19 @@ export class StudentService {
         const passwordHash = await this.authService.hashPassword(createStudentDto.password);
 
         // Create user and student profile
+        // Create user and student profile
         const user = await this.prisma.user.create({
             data: {
                 email: createStudentDto.email,
+                phone: createStudentDto.phone, // Save phone to User
                 passwordHash,
                 role: Role.STUDENT,
                 studentProfile: {
                     create: {
                         studentCode: createStudentDto.studentCode,
                         fullName: createStudentDto.fullName,
-                        phone: createStudentDto.phone,
-                    },
+                        // phone removed from StudentProfile
+                    } as any, // Cast as any to bypass TS error if client is not regenerated
                 },
             },
             include: {
@@ -117,20 +119,6 @@ export class StudentService {
             updateData.fullName = updateStudentDto.fullName;
         }
 
-        if (updateStudentDto.phone) {
-            updateData.phone = updateStudentDto.phone;
-        }
-
-        if (updateStudentDto.dateOfBirth) {
-            updateData.dateOfBirth = updateStudentDto.dateOfBirth;
-        }
-
-        if (updateStudentDto.identityCard) {
-            updateData.identityCard = updateStudentDto.identityCard;
-        }
-
-
-
         if (updateStudentDto.identityCardImage) {
             const cccdUrl = await this.cloudinary.uploadBase64Image(
                 updateStudentDto.identityCardImage,
@@ -154,9 +142,13 @@ export class StudentService {
             updateData.faceRegistered = true;
         }
 
-        // Handle User-specific fields (Email, Password)
-        if (updateStudentDto.email || updateStudentDto.password) {
+        // Handle User-specific fields (Email, Phone, Password)
+        if (updateStudentDto.email || updateStudentDto.phone || updateStudentDto.password) {
             const userUpdateData: any = {};
+
+            if (updateStudentDto.phone) {
+                userUpdateData.phone = updateStudentDto.phone;
+            }
 
             if (updateStudentDto.email) {
                 // Check if email already exists for another user
@@ -192,11 +184,12 @@ export class StudentService {
     }
 
     async getAllStudents() {
-        return this.prisma.studentProfile.findMany({
+        const students = await this.prisma.studentProfile.findMany({
             include: {
                 user: {
                     select: {
                         email: true,
+                        phone: true, // Select phone from user
                         createdAt: true,
                     },
                 },
@@ -207,6 +200,12 @@ export class StudentService {
                 },
             },
         });
+
+        // Map phone to top level
+        return students.map(student => ({
+            ...student,
+            phone: student.user.phone || '',
+        }));
     }
 
     async getStudentById(id: string) {
@@ -217,6 +216,7 @@ export class StudentService {
                     select: {
                         id: true,
                         email: true,
+                        phone: true,
                         createdAt: true,
                     },
                 },
@@ -227,7 +227,10 @@ export class StudentService {
             throw new NotFoundException('Không tìm thấy học viên');
         }
 
-        return student;
+        return {
+            ...student,
+            phone: student.user.phone || '',
+        };
     }
 
     async getStudentByUserId(userId: string) {
@@ -238,6 +241,7 @@ export class StudentService {
                     select: {
                         id: true,
                         email: true,
+                        phone: true,
                         role: true,
                     },
                 },
@@ -248,6 +252,9 @@ export class StudentService {
             throw new NotFoundException('Không tìm thấy học viên');
         }
 
-        return student;
+        return {
+            ...student,
+            phone: student.user.phone || '',
+        };
     }
 }

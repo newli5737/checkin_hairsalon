@@ -47,7 +47,7 @@ model StudentProfile {
   userId         String   @unique
   studentCode    String   @unique
   fullName       String
-  phone          String
+  // phone field removed - using User.phone instead
   avatarUrl      String?
   faceRegistered Boolean  @default(false)
   identityCard   String?
