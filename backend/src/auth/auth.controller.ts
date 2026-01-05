@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Request, Res, Req } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Request, Res, Req, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -42,18 +42,19 @@ export class AuthController {
         const refreshToken = (req as any).cookies?.refreshToken;
 
         if (!refreshToken) {
-            throw new Error('No refresh token');
+            throw new UnauthorizedException('No refresh token');
         }
 
         const { accessToken } = await this.authService.refreshAccessToken(refreshToken);
 
+        const isProduction = process.env.NODE_ENV === 'production';
+
         const cookieOptions = {
             httpOnly: true,
-            secure: this.configService.get('COOKIE_SECURE') === 'true',
-            sameSite: this.configService.get('COOKIE_SAME_SITE') || 'lax',
-            domain: this.configService.get('COOKIE_DOMAIN'),
+            secure: isProduction, // true in production, false in development
+            sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' for cross-origin in production, 'lax' for localhost
             maxAge: 30 * 60 * 1000, // 30 minutes
-        } as const;
+        };
 
         res.cookie('accessToken', accessToken, cookieOptions);
 
@@ -97,12 +98,13 @@ export class AuthController {
         accessToken: string,
         refreshToken: string
     ) {
+        const isProduction = process.env.NODE_ENV === 'production';
+
         const cookieOptions = {
             httpOnly: true,
-            secure: this.configService.get('COOKIE_SECURE') === 'true',
-            sameSite: this.configService.get('COOKIE_SAME_SITE') || 'lax',
-            domain: this.configService.get('COOKIE_DOMAIN'),
-        } as const;
+            secure: isProduction, // true in production, false in development
+            sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' for cross-origin in production, 'lax' for localhost
+        };
 
         res.cookie('accessToken', accessToken, {
             ...cookieOptions,
