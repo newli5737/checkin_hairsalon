@@ -16,6 +16,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import RegisterPage from "./components/RegisterPage";
 import ClassRegistrationPage from "./components/ClassRegistrationPage";
 import AvailableClassesPage from "./components/AvailableClassesPage";
+import Statistics from "./components/admin/Statistics";
 import { Toaster } from "./components/ui/sonner";
 
 function App() {
@@ -125,6 +126,7 @@ function App() {
             <Route path="class-enrollment" element={<ClassEnrollmentPage />} />
             <Route path="sessions" element={<SessionManagement />} />
             <Route path="attendance" element={<AttendanceViewer />} />
+            <Route path="statistics" element={<Statistics />} />
             {/* Redirect /admin to /admin/dashboard */}
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
           </Route>

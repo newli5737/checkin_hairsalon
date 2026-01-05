@@ -562,7 +562,7 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            <div className="relative aspect-[3/4] md:aspect-video bg-black rounded-lg overflow-hidden">
               {capturedImage ? (
                 <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
               ) : (

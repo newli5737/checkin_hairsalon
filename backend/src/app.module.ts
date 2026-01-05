@@ -12,6 +12,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { TrainingClassModule } from './training-class/training-class.module';
 import { EnrollmentModule } from './enrollment/enrollment.module';
 import { MailerModule } from './common/mailer/mailer.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MailerModule } from './common/mailer/mailer.module';
     TrainingClassModule,
     EnrollmentModule,
     MailerModule,
+    StatisticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

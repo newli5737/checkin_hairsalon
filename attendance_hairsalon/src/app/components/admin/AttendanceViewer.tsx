@@ -243,6 +243,7 @@ export default function AttendanceViewer() {
                                             <TableHead className="text-center">Face Score</TableHead>
                                             <TableHead className="text-center">Ra</TableHead>
                                             <TableHead className="text-center">Face Score</TableHead>
+                                            <TableHead className="text-center">Vị trí</TableHead>
                                             <TableHead className="text-center">Trạng thái</TableHead>
                                             <TableHead className="text-right">Hành động</TableHead>
                                         </TableRow>
@@ -346,6 +347,23 @@ export default function AttendanceViewer() {
                                                             {(attendance.checkOutFaceScore * 100).toFixed(0)}%
                                                         </Badge>
                                                     ) : "-"}
+                                                </TableCell>
+
+                                                {/* Location Note */}
+                                                <TableCell className="text-center">
+                                                    {attendance.locationNote ? (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`text-xs ${attendance.locationNote.includes('xa lớp học')
+                                                                ? 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                                                                : 'bg-gray-50 text-gray-600 border-gray-300'
+                                                                }`}
+                                                        >
+                                                            {attendance.locationNote}
+                                                        </Badge>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">-</span>
+                                                    )}
                                                 </TableCell>
 
                                                 <TableCell className="text-center">{getStatusBadge(attendance.status)}</TableCell>

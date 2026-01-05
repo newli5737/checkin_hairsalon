@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Calendar, ClipboardCheck, LogOut, Menu, X, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, ClipboardCheck, LogOut, Menu, X, BookOpen, BarChart3 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
@@ -22,6 +22,7 @@ export default function AdminLayout({ onLogout }: AdminLayoutProps) {
         { path: "/admin/students", icon: Users, label: "Quản lý học viên" },
         { path: "/admin/sessions", icon: Calendar, label: "Quản lý ca học" },
         { path: "/admin/attendance", icon: ClipboardCheck, label: "Xem điểm danh" },
+        { path: "/admin/statistics", icon: BarChart3, label: "Thống kê" },
     ];
 
     const SidebarContent = () => (
