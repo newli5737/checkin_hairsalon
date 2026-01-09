@@ -272,18 +272,19 @@ export class StatisticsService {
             },
         });
 
-        // On-time vs late
-        const onTimeCount = await this.prisma.attendance.count({
+        // Present count (simplified - no more late tracking)
+        const presentCount = await this.prisma.attendance.count({
             where: {
                 ...where,
                 status: 'PRESENT',
             },
         });
 
-        const lateCount = await this.prisma.attendance.count({
+        // Absent count
+        const absentCount = await this.prisma.attendance.count({
             where: {
                 ...where,
-                status: 'LATE',
+                status: 'ABSENT',
             },
         });
 
@@ -300,11 +301,11 @@ export class StatisticsService {
             endDate,
             totalSessions,
             totalAttendances,
-            onTimeCount,
-            lateCount,
+            presentCount,
+            absentCount,
             farCheckInCount,
-            onTimeRate: totalAttendances > 0 ? (onTimeCount / totalAttendances) * 100 : 0,
-            lateRate: totalAttendances > 0 ? (lateCount / totalAttendances) * 100 : 0,
+            presentRate: totalAttendances > 0 ? (presentCount / totalAttendances) * 100 : 0,
+            absentRate: totalAttendances > 0 ? (absentCount / totalAttendances) * 100 : 0,
             farCheckInRate: totalAttendances > 0 ? (farCheckInCount / totalAttendances) * 100 : 0,
         };
     }

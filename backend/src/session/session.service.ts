@@ -101,64 +101,10 @@ export class SessionService {
         return this.getSessionsByDate(today, trainingClassId);
     }
 
+    // DEPRECATED: Không còn sử dụng tính năng đăng ký ca học
+    // Giờ hệ thống tự động chọn ca phù hợp khi điểm danh
     async registerForSession(studentId: string, sessionId: string) {
-        const session = await this.prisma.classSession.findUnique({
-            where: { id: sessionId },
-        });
-
-        if (!session) {
-            throw new NotFoundException('Không tìm thấy ca học');
-        }
-
-        // Check if registration deadline has passed
-        if (new Date() > session.registrationDeadline) {
-            throw new BadRequestException('Đã hết hạn đăng ký ca học này');
-        }
-
-        // Check if student already registered
-        const existing = await this.prisma.sessionRegistration.findUnique({
-            where: {
-                studentId_sessionId: {
-                    studentId,
-                    sessionId,
-                },
-            },
-        });
-
-        if (existing) {
-            throw new ConflictException('Bạn đã đăng ký ca học này rồi');
-        }
-
-        // Check if student already registered for another session on the same date
-        const student = await this.prisma.studentProfile.findUnique({
-            where: { id: studentId },
-            include: {
-                sessionRegistrations: {
-                    include: {
-                        session: true,
-                    },
-                },
-            },
-        });
-
-        if (!student) {
-            throw new NotFoundException('Không tìm thấy học viên');
-        }
-
-        const sameDayRegistration = student.sessionRegistrations.find(
-            (reg) => reg.session.date === session.date,
-        );
-
-        if (sameDayRegistration) {
-            throw new ConflictException('Bạn chỉ được đăng ký 1 ca học mỗi ngày');
-        }
-
-        return this.prisma.sessionRegistration.create({
-            data: {
-                studentId,
-                sessionId,
-            },
-        });
+        throw new BadRequestException('Tính năng đăng ký ca học đã được thay thế. Vui lòng điểm danh trực tiếp, hệ thống sẽ tự động chọn ca phù hợp.');
     }
 
     async bulkCreateSessions(bulkDto: any) {

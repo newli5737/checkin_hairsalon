@@ -2,8 +2,8 @@ import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 
 export class CheckInDto {
     @IsString()
-    @IsNotEmpty({ message: 'Session ID không được để trống' })
-    sessionId: string;
+    @IsOptional() // Giờ là optional - hệ thống tự tìm session
+    sessionId?: string;
 
     @IsString()
     @IsNotEmpty({ message: 'Ảnh khuôn mặt không được để trống' })

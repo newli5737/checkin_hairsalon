@@ -1,133 +1,30 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Progress } from "./ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { Label } from "./ui/label";
 import Navigation from "./Navigation";
 import { toast } from "sonner";
-import { Camera, MapPin, CheckCircle2, XCircle, Loader2, GraduationCap } from "lucide-react";
-import { uploadToCloudinary } from "../services/cloudinary";
-import { attendanceApi, enrollmentApi } from "../services/api";
+import { Camera, MapPin, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { attendanceApi } from "../services/api";
 
 interface CheckInPageProps {
   onLogout?: () => void;
 }
 
-interface TrainingClass {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-  location: string;
-  year: string;
-}
-
 export default function CheckInPage({ onLogout }: CheckInPageProps) {
   const navigate = useNavigate();
-  const locationState = useLocation();
-  const [sessionId, setSessionId] = useState<string | null>(locationState.state?.sessionId || null);
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [loadingSessions, setLoadingSessions] = useState(false);
-  const [myClasses, setMyClasses] = useState<TrainingClass[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
-  const [loadingClasses, setLoadingClasses] = useState(false);
 
-  const [step, setStep] = useState(sessionId ? 1 : 0);
+  // Simplified state - remove session/class selection
+  const [step, setStep] = useState(1); // Start from step 1 (camera)
   const [faceStatus, setFaceStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
   const [gpsStatus, setGpsStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
-  const [gpsRetryCount, setGpsRetryCount] = useState(0);
   const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [checkInLoading, setCheckInLoading] = useState(false);
-
-  // Check-in/Check-out State
-  const [attendanceMode, setAttendanceMode] = useState<'check-in' | 'check-out' | 'done'>('check-in');
-  const [checkingStatus, setCheckingStatus] = useState(false);
-
-  useEffect(() => {
-    fetchMyClasses();
-  }, []);
-
-  useEffect(() => {
-    if (selectedClassId && !sessionId) {
-      fetchSessions();
-    }
-  }, [selectedClassId, sessionId]);
-
-  useEffect(() => {
-    if (sessionId) {
-      checkAttendanceStatus();
-    }
-  }, [sessionId]);
-
-  const checkAttendanceStatus = async () => {
-    if (!sessionId) return;
-
-    setCheckingStatus(true);
-    try {
-      const history = await attendanceApi.getMyHistory();
-      const currentSessionRecord = history.find((r: any) => r.sessionId === sessionId);
-
-      if (currentSessionRecord) {
-        if (currentSessionRecord.checkOutTime) {
-          setAttendanceMode('done');
-        } else {
-          setAttendanceMode('check-out');
-        }
-      } else {
-        setAttendanceMode('check-in');
-      }
-    } catch (error) {
-      console.error("Error checking status:", error);
-    } finally {
-      setCheckingStatus(false);
-    }
-  };
-
-  const fetchMyClasses = async () => {
-    try {
-      setLoadingClasses(true);
-      const data = await enrollmentApi.getMyClasses();
-      setMyClasses(data);
-
-      // Auto-select first class if only one
-      if (data.length === 1) {
-        setSelectedClassId(data[0].id);
-      }
-    } catch (error) {
-      toast.error("Không thể tải danh sách lớp học");
-    } finally {
-      setLoadingClasses(false);
-    }
-  };
-
-  const fetchSessions = async () => {
-    try {
-      setLoadingSessions(true);
-      const data = await import("../services/api").then(m => m.sessionApi.getTodaySessions(true));
-      setSessions(data);
-    } catch (error) {
-      toast.error("Không thể tải danh sách ca học");
-    } finally {
-      setLoadingSessions(false);
-    }
-  };
-
-  const handleSelectSession = (id: string) => {
-    setSessionId(id);
-    setStep(1);
-  };
 
   useEffect(() => {
     return () => {
@@ -184,7 +81,6 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
           setCameraStream(null);
         }
 
-        // Skip Cloudinary upload - send base64 to backend
         setFaceStatus("success");
         setTimeout(() => setStep(2), 500);
       }
@@ -208,7 +104,6 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
         },
         (error) => {
           console.error(error);
-
           setGpsStatus("error");
           toast.error("Không thể lấy vị trí: " + error.message);
         },
@@ -235,13 +130,13 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
   }, [step, gpsStatus]);
 
   const submitCheckIn = async () => {
-    if (!sessionId || !capturedImage || !location) {
+    if (!capturedImage || !location) {
       toast.error("Thiếu thông tin điểm danh");
       return;
     }
 
+    // Không cần sessionId - backend tự tìm
     const checkInData = {
-      sessionId,
       imageBase64: capturedImage,
       lat: location.lat,
       lng: location.lng
@@ -249,19 +144,21 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
 
     setCheckInLoading(true);
     try {
-      if (attendanceMode === 'check-out') {
-        await attendanceApi.checkOut(checkInData);
-        toast.success("Check-out thành công!");
-      } else {
-        await attendanceApi.checkIn(checkInData);
-        toast.success("Điểm danh thành công!");
+      const response = await attendanceApi.checkIn(checkInData);
+
+      toast.success(response.message || "Điểm danh thành công!");
+
+      // Hiển thị thông tin ca học đã được tự động chọn
+      if (response.data?.session) {
+        const { session } = response.data;
+        toast.info(`Ca học: ${session.name} - ${session.className}`, { duration: 5000 });
       }
 
       setTimeout(() => {
         navigate("/");
       }, 1500);
     } catch (error: any) {
-      toast.error(error.message || "Thao tác thất bại");
+      toast.error(error.message || "Điểm danh thất bại");
       // If failed, reset to step 1 to retake photo
       setCapturedImage(null);
       setFaceStatus("idle");
@@ -273,11 +170,6 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
 
   const progressValue = (step / 3) * 100;
 
-  // Filter sessions by selected class
-  const filteredSessions = selectedClassId
-    ? sessions.filter(s => s.trainingClassId === selectedClassId)
-    : sessions;
-
   return (
     <div className="min-h-screen pb-20 md:pb-0">
       <Navigation onLogout={onLogout || (() => navigate("/login"))} />
@@ -286,97 +178,11 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
         {/* Progress */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xl font-semibold">
-              {attendanceMode === 'check-out' ? 'Check-out' : 'Điểm danh (Check-in)'}
-            </h2>
-            <span className="text-sm text-gray-600">
-              {step === 0 ? "Chọn ca học" : `Bước ${step}/3`}
-            </span>
+            <h2 className="text-xl font-semibold">Điểm danh</h2>
+            <span className="text-sm text-gray-600">Bước {step}/3</span>
           </div>
-          {step > 0 && <Progress value={progressValue} className="h-2" />}
+          <Progress value={progressValue} className="h-2" />
         </div>
-
-        {/* Step 0: Select Session */}
-        {step === 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Chọn ca học hôm nay</CardTitle>
-              <CardDescription>Vui lòng chọn lớp và ca học bạn muốn điểm danh</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Class Selector */}
-              <div className="space-y-2">
-                <Label htmlFor="class-select" className="flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4" />
-                  Chọn lớp học
-                </Label>
-                {loadingClasses ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                  </div>
-                ) : myClasses.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500">
-                    <p>Bạn chưa được duyệt vào lớp nào.</p>
-                    <Button variant="link" onClick={() => navigate("/classes")}>
-                      Đăng ký lớp học
-                    </Button>
-                  </div>
-                ) : (
-                  <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-                    <SelectTrigger id="class-select">
-                      <SelectValue placeholder="Chọn lớp học..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {myClasses.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id}>
-                          {cls.name} ({cls.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              {/* Sessions List */}
-              {selectedClassId && (
-                <>
-                  {loadingSessions ? (
-                    <div className="text-center py-8">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
-                      <p className="mt-2 text-gray-500">Đang tải danh sách ca học...</p>
-                    </div>
-                  ) : filteredSessions.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>Không có ca học nào diễn ra hôm nay cho lớp này.</p>
-                      <Button variant="link" onClick={() => navigate("/")}>Quay về trang chủ</Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <Label>Chọn ca học</Label>
-                      {filteredSessions.map((session) => (
-                        <div
-                          key={session.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                          onClick={() => handleSelectSession(session.id)}
-                        >
-                          <div>
-                            <h3 className="font-semibold text-lg">{session.name}</h3>
-                            <p className="text-sm text-gray-600">
-                              {session.startTime} - {session.endTime}
-                            </p>
-                          </div>
-                          <Button size="sm" variant="outline">
-                            {attendanceMode === 'check-out' ? 'Check Out' : 'Chọn'}
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Step 1: Face Recognition */}
         {step === 1 && (
@@ -387,31 +193,11 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                 <CardTitle>Bước 1: Chụp ảnh khuôn mặt</CardTitle>
               </div>
               <CardDescription>
-                {attendanceMode === 'check-out'
-                  ? "Chụp ảnh để xác nhận ra về (Check-out)"
-                  : "Vui lòng chụp ảnh khuôn mặt của bạn để xác thực (Check-in)"}
+                Vui lòng chụp ảnh khuôn mặt của bạn để xác thực
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {checkingStatus ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-                  <p>Đang kiểm tra trạng thái điểm danh...</p>
-                </div>
-              ) : attendanceMode === 'done' ? (
-                <div className="text-center py-6">
-                  <div className="bg-green-100 text-green-800 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-green-700 mb-2">Đã hoàn thành!</h3>
-                  <p className="text-gray-600 mb-6">
-                    Bạn đã hoàn thành Check-in và Check-out cho ca học này.
-                  </p>
-                  <Button onClick={() => navigate("/")} variant="outline">
-                    Quay về trang chủ
-                  </Button>
-                </div>
-              ) : !capturedImage ? (
+              {!capturedImage ? (
                 <div className="space-y-4">
                   <div className="relative aspect-[3/4] md:aspect-video bg-gray-900 rounded-lg overflow-hidden">
                     <video
@@ -439,7 +225,7 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                     </Button>
                   ) : (
                     <Button onClick={capturePhoto} className="w-full">
-                      Chụp và Tải lên
+                      Chụp ảnh
                     </Button>
                   )}
                 </div>
@@ -453,39 +239,24 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                     />
                   </div>
 
-                  {faceStatus === "processing" && (
-                    <div className="flex items-center justify-center gap-2 text-blue-600">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Đang tải ảnh lên...</span>
-                    </div>
-                  )}
-
                   {faceStatus === "success" && (
                     <div className="flex items-center justify-center gap-2 text-green-600">
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>Ảnh hợp lệ (Sẵn sàng gửi)</span>
+                      <span>Ảnh đã sẵn sàng</span>
                     </div>
                   )}
 
-                  {faceStatus === "error" && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center gap-2 text-red-600">
-                        <XCircle className="w-5 h-5" />
-                        <span>Lỗi khi tải ảnh</span>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setCapturedImage(null);
-                          setFaceStatus("idle");
-                          startCamera();
-                        }}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Chụp lại
-                      </Button>
-                    </div>
-                  )}
+                  <Button
+                    onClick={() => {
+                      setCapturedImage(null);
+                      setFaceStatus("idle");
+                      startCamera();
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Chụp lại
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -540,7 +311,7 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                     Thử lại
                   </Button>
                   <Button onClick={skipLocation} variant="secondary" className="flex-1 text-orange-600 bg-orange-50 hover:bg-orange-100">
-                    Bỏ qua (Tiếp tục)
+                    Bỏ qua
                   </Button>
                 </div>
               )}
@@ -561,10 +332,10 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <CardTitle>Bước 3: Xác nhận {attendanceMode === 'check-out' ? 'Check-out' : 'Check-in'}</CardTitle>
+                <CardTitle>Bước 3: Xác nhận điểm danh</CardTitle>
               </div>
               <CardDescription>
-                Gửi thông tin lên hệ thống
+                Hệ thống sẽ tự động chọn ca học phù hợp
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -584,6 +355,12 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                     <p className="text-sm text-green-700">Độ chính xác: {location ? Math.round(location.accuracy) : 0}m</p>
                   </div>
                 </div>
+
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    💡 Hệ thống sẽ tự động chọn ca học phù hợp với thời gian hiện tại
+                  </p>
+                </div>
               </div>
 
               <div className="pt-4 border-t">
@@ -596,7 +373,7 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5 mr-2" />
-                      Gửi {attendanceMode === 'check-out' ? 'Check-out' : 'Check-in'}
+                      Xác nhận điểm danh
                     </>
                   )}
                 </Button>
@@ -606,13 +383,13 @@ export default function CheckInPage({ onLogout }: CheckInPageProps) {
         )}
 
         {/* Back Button */}
-        {step === 1 && (
+        {step > 1 && (
           <Button
             variant="ghost"
             className="w-full mt-4"
-            onClick={() => navigate("/")}
+            onClick={() => setStep(step - 1)}
           >
-            Quay lại
+            Quay lại bước trước
           </Button>
         )}
       </div>

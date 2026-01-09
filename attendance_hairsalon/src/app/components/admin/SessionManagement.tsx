@@ -49,6 +49,7 @@ export default function SessionManagement() {
         name: "",
         startTime: "",
         endTime: "",
+        isAutoSelected: false,
     });
 
     // Bulk session dialog
@@ -101,10 +102,11 @@ export default function SessionManagement() {
                 name: session.name,
                 startTime: session.startTime,
                 endTime: session.endTime,
+                isAutoSelected: session.isAutoSelected || false,
             });
         } else {
             setEditingSession(null);
-            setFormData({ name: "", startTime: "", endTime: "" });
+            setFormData({ name: "", startTime: "", endTime: "", isAutoSelected: false });
         }
         setDialogOpen(true);
     };
@@ -308,6 +310,26 @@ export default function SessionManagement() {
                                                 </div>
                                             </div>
 
+                                            <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <input
+                                                    id="isAutoSelected"
+                                                    type="checkbox"
+                                                    checked={formData.isAutoSelected}
+                                                    onChange={(e) =>
+                                                        setFormData({ ...formData, isAutoSelected: e.target.checked })
+                                                    }
+                                                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                />
+                                                <div className="flex-1">
+                                                    <Label htmlFor="isAutoSelected" className="cursor-pointer font-medium text-blue-900">
+                                                        Ca mặc định (tự động chọn)
+                                                    </Label>
+                                                    <p className="text-xs text-blue-700 mt-1">
+                                                        Ca học này sẽ được ưu tiên khi hệ thống tự động chọn ca điểm danh
+                                                    </p>
+                                                </div>
+                                            </div>
+
                                             <div className="flex gap-2 pt-4">
                                                 <Button
                                                     type="button"
@@ -350,11 +372,16 @@ export default function SessionManagement() {
                                         <Card key={session.id} className="group border-l-4 border-l-indigo-500 hover:shadow-md transition-all">
                                             <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                 <div>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2 flex-wrap">
                                                         <h3 className="text-lg font-bold text-gray-900">{session.name}</h3>
                                                         <Badge variant="secondary" className="text-xs">
                                                             {session.startTime} - {session.endTime}
                                                         </Badge>
+                                                        {session.isAutoSelected && (
+                                                            <Badge className="text-xs bg-blue-600">
+                                                                Mặc định
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                                                         <div className="flex items-center gap-1">

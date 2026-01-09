@@ -17,9 +17,7 @@ enum Role {
 
 enum AttendanceStatus {
   PRESENT
-  LATE
   ABSENT
-  LEFT_EARLY
 }
 
 enum ClassEnrollmentStatus {
@@ -98,14 +96,15 @@ model ClassSession {
   name                 String   // Ca 1, Ca 2, Ca 3
   startTime            String   // Format: HH:mm
   endTime              String   // Format: HH:mm
-  registrationDeadline DateTime // startTime - 2 hours
+  registrationDeadline DateTime // startTime - 2 hours (kept for backward compatibility)
+  isAutoSelected       Boolean  @default(false) // Ca mặc định tự động chọn
   isDeleted            Boolean  @default(false)
   createdAt            DateTime @default(now())
-  
+
   trainingClass        TrainingClass? @relation(fields: [trainingClassId], references: [id], onDelete: Cascade)
   sessionRegistrations SessionRegistration[]
   attendances          Attendance[]
-  
+
   @@map("class_sessions")
 }
 

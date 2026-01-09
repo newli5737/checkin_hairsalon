@@ -13,6 +13,143 @@ export class AttendanceService {
         private faceService: FaceVerificationService,
     ) { }
 
+    /**
+     * Tự động tìm ca học phù hợp cho student check-in
+     * Logic:
+     * 1. Lấy danh sách lớp học student đã được approved
+     * 2. Tìm session trong ngày hôm nay:
+     *    - Trong khoảng thời gian cho phép (startTime - 30 phút → endTime + 30 phút)
+     *    - Ưu tiên session có isAutoSelected = true
+     * 3. Nếu có nhiều session → chọn session gần nhất với thời gian hiện tại
+     * 4. Trả về sessionId hoặc throw error nếu không tìm thấy
+     */
+    async findCurrentSession(studentId: string): Promise<string> {
+        const now = new Date();
+        const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const currentTime = this.formatTime(now);
+
+        // 1. Lấy các lớp học student đã được approved
+        const enrollments = await this.prisma.classEnrollmentRequest.findMany({
+            where: {
+                studentId,
+                status: 'APPROVED',
+            },
+            select: {
+                trainingClassId: true,
+            },
+        });
+
+        if (enrollments.length === 0) {
+            throw new BadRequestException('Bạn chưa được duyệt vào lớp học nào');
+        }
+
+        const classIds = enrollments.map(e => e.trainingClassId);
+
+        // 2. Tìm session phù hợp (trong khoảng ±30 phút)
+        const sessions = await this.prisma.classSession.findMany({
+            where: {
+                trainingClassId: { in: classIds },
+                date: today,
+                isDeleted: false,
+            },
+            orderBy: [
+                { isAutoSelected: 'desc' }, // Ưu tiên ca được đánh dấu
+                { startTime: 'asc' },       // Ưu tiên ca sớm nhất
+            ],
+        });
+
+        if (sessions.length === 0) {
+            throw new BadRequestException('Không có ca học nào trong ngày hôm nay');
+        }
+
+        // 3. Filter sessions trong khoảng thời gian cho phép (±30 phút)
+        const validSessions = sessions.filter(session => {
+            const startMinusBuffer = this.subtractMinutes(session.startTime, 30);
+            const endPlusBuffer = this.addMinutes(session.endTime, 30);
+
+            return this.isTimeInRange(currentTime, startMinusBuffer, endPlusBuffer);
+        });
+
+        if (validSessions.length === 0) {
+            throw new BadRequestException(
+                'Không có ca học nào khả dụng trong thời gian này. Vui lòng điểm danh trong khoảng 30 phút trước/sau giờ học.'
+            );
+        }
+
+        // 4. Chọn session gần nhất (hoặc auto-selected nếu có)
+        const nearestSession = validSessions.reduce((prev, curr) => {
+            // Ưu tiên auto-selected
+            if (curr.isAutoSelected && !prev.isAutoSelected) return curr;
+            if (!curr.isAutoSelected && prev.isAutoSelected) return prev;
+
+            // Nếu cùng mức ưu tiên, chọn gần thời gian hiện tại nhất
+            const prevDiff = Math.abs(this.timeDiffInMinutes(currentTime, prev.startTime));
+            const currDiff = Math.abs(this.timeDiffInMinutes(currentTime, curr.startTime));
+            return currDiff < prevDiff ? curr : prev;
+        });
+
+        // 5. Kiểm tra đã điểm danh chưa
+        const existingAttendance = await this.prisma.attendance.findUnique({
+            where: {
+                studentId_sessionId: {
+                    studentId,
+                    sessionId: nearestSession.id,
+                },
+            },
+        });
+
+        if (existingAttendance && existingAttendance.checkInTime) {
+            throw new BadRequestException('Bạn đã điểm danh ca học này rồi');
+        }
+
+        return nearestSession.id;
+    }
+
+    // Helper: Format Date to HH:mm
+    private formatTime(date: Date): string {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    // Helper: Check if time is in range
+    private isTimeInRange(time: string, start: string, end: string): boolean {
+        const timeMinutes = this.timeToMinutes(time);
+        const startMinutes = this.timeToMinutes(start);
+        const endMinutes = this.timeToMinutes(end);
+
+        // Handle cases where range crosses midnight
+        if (endMinutes < startMinutes) {
+            return timeMinutes >= startMinutes || timeMinutes <= endMinutes;
+        }
+
+        return timeMinutes >= startMinutes && timeMinutes <= endMinutes;
+    }
+
+    // Helper: Convert HH:mm to minutes since midnight
+    private timeToMinutes(time: string): number {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+    }
+
+    // Helper: Calculate time difference in minutes
+    private timeDiffInMinutes(time1: string, time2: string): number {
+        return this.timeToMinutes(time1) - this.timeToMinutes(time2);
+    }
+
+    // Helper: Add minutes to time string
+    private addMinutes(time: string, minutes: number): string {
+        const totalMinutes = this.timeToMinutes(time) + minutes;
+        const newH = Math.floor(totalMinutes / 60) % 24;
+        const newM = totalMinutes % 60;
+        return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+    }
+
+    // Helper: Subtract minutes from time string
+    private subtractMinutes(time: string, minutes: number): string {
+        return this.addMinutes(time, -minutes);
+    }
+
     async checkIn(studentId: string, checkInDto: CheckInDto) {
         const student = await this.prisma.studentProfile.findUnique({
             where: { id: studentId },
@@ -26,8 +163,11 @@ export class AttendanceService {
             throw new BadRequestException('Bạn chưa đăng ký khuôn mặt');
         }
 
+        // 1. Tự động tìm session phù hợp (nếu không có sessionId)
+        const sessionId = checkInDto.sessionId || await this.findCurrentSession(studentId);
+
         const session = await this.prisma.classSession.findUnique({
-            where: { id: checkInDto.sessionId },
+            where: { id: sessionId },
             include: {
                 trainingClass: true, // Include class to get coordinates
             },
@@ -75,13 +215,14 @@ export class AttendanceService {
             where: {
                 studentId_sessionId: {
                     studentId,
-                    sessionId: checkInDto.sessionId,
+                    sessionId: sessionId,
                 },
             },
         });
 
         const checkInTime = new Date();
-        const status = this.calculateStatus(checkInTime, session.startTime, session.date);
+        // Đơn giản hóa status: chỉ PRESENT hoặc ABSENT
+        const status = AttendanceStatus.PRESENT;
 
         if (attendance) {
             // Update existing record
@@ -102,7 +243,7 @@ export class AttendanceService {
             attendance = await this.prisma.attendance.create({
                 data: {
                     studentId,
-                    sessionId: checkInDto.sessionId,
+                    sessionId: sessionId,
                     checkInTime,
                     checkInLat: checkInDto.lat,
                     checkInLng: checkInDto.lng,
@@ -114,7 +255,22 @@ export class AttendanceService {
             });
         }
 
-        return attendance;
+        // Trả về kèm thông tin session để frontend hiển thị
+        return {
+            success: true,
+            message: 'Điểm danh thành công',
+            data: {
+                attendance,
+                session: {
+                    id: session.id,
+                    name: session.name,
+                    className: session.trainingClass?.name,
+                    startTime: session.startTime,
+                    endTime: session.endTime,
+                    date: session.date,
+                },
+            },
+        };
     }
 
     // Haversine formula to calculate distance between two coordinates in meters
@@ -282,6 +438,8 @@ export class AttendanceService {
         });
     }
 
+    // DEPRECATED: Không còn sử dụng logic tính LATE/LEFT_EARLY
+    // Giờ chỉ có PRESENT (đã check-in) hoặc ABSENT (không check-in)
     private calculateStatus(
         checkInTime: Date,
         sessionStartTime: string,
@@ -289,26 +447,8 @@ export class AttendanceService {
         checkOutTime?: Date | null,
         sessionEndTime?: string
     ): AttendanceStatus {
-        const startDateTime = new Date(`${sessionDate}T${sessionStartTime}:00`);
-
-        // Base status based on Check-in
-        let status: AttendanceStatus = AttendanceStatus.PRESENT;
-        if (checkInTime > startDateTime) {
-            status = AttendanceStatus.LATE;
-        }
-
-        // Refine status based on Check-out
-        if (checkOutTime && sessionEndTime) {
-            const endDateTime = new Date(`${sessionDate}T${sessionEndTime}:00`);
-            // Allow 5 minutes buffer for early leave? Or strict? Let's be strict for now as requested.
-            if (checkOutTime < endDateTime) {
-                // Prioritize LEFT_EARLY over LATE? Or just set LEFT_EARLY? 
-                // User asked: "sớm trước giờ của ca thì trạng thái là về sớm".
-                status = AttendanceStatus.LEFT_EARLY;
-            }
-        }
-
-        return status;
+        // Đơn giản hóa: có check-in = PRESENT
+        return AttendanceStatus.PRESENT;
     }
 
     async getWeeklyReport(startDate: string, endDate: string, classId?: string) {

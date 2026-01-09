@@ -71,7 +71,8 @@ async function main() {
 
                     // 90% chance to attend if registered
                     if (Math.random() > 0.1) {
-                        const status = Math.random() > 0.1 ? AttendanceStatus.PRESENT : AttendanceStatus.LATE;
+                        // Đơn giản hóa: chỉ dùng PRESENT (không còn LATE)
+                        const status = AttendanceStatus.PRESENT;
 
                         await prisma.attendance.create({
                             data: {

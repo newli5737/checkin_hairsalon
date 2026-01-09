@@ -95,13 +95,14 @@ export default function AttendanceViewer() {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case "PRESENT":
-                return <Badge className="bg-green-600">Đúng giờ</Badge>;
-            case "LATE":
-                return <Badge className="bg-orange-500">Trễ</Badge>;
+                return <Badge className="bg-green-600">Có mặt</Badge>;
             case "ABSENT":
                 return <Badge variant="destructive">Vắng</Badge>;
+            // Deprecated statuses (for backward compatibility)
+            case "LATE":
+                return <Badge className="bg-green-600">Có mặt</Badge>;
             case "LEFT_EARLY":
-                return <Badge className="bg-yellow-500">Về sớm</Badge>;
+                return <Badge className="bg-green-600">Có mặt</Badge>;
             default:
                 return <Badge variant="secondary">Chưa rõ</Badge>;
         }

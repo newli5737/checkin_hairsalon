@@ -21,7 +21,6 @@ import {
   Calendar,
   CheckCircle2,
   XCircle,
-  Clock,
   Navigation,
 } from "lucide-react";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
@@ -33,11 +32,11 @@ interface OverviewStats {
   endDate: string;
   totalSessions: number;
   totalAttendances: number;
-  onTimeCount: number;
-  lateCount: number;
+  presentCount: number;
+  absentCount: number;
   farCheckInCount: number;
-  onTimeRate: number;
-  lateRate: number;
+  presentRate: number;
+  absentRate: number;
   farCheckInRate: number;
 }
 
@@ -267,11 +266,11 @@ export default function Statistics() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Đúng giờ</p>
+                  <p className="text-sm font-medium text-gray-600">Có mặt</p>
                   <p className="text-3xl font-bold text-green-600 mt-2">
-                    {overview.onTimeRate.toFixed(1)}%
+                    {overview.presentRate.toFixed(1)}%
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{overview.onTimeCount} lượt</p>
+                  <p className="text-xs text-gray-500 mt-1">{overview.presentCount} lượt</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="w-6 h-6 text-green-600" />
@@ -280,18 +279,18 @@ export default function Statistics() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-orange-500 shadow-md hover:shadow-lg transition-shadow">
+          <Card className="border-l-4 border-l-red-500 shadow-md hover:shadow-lg transition-shadow">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Đi muộn</p>
-                  <p className="text-3xl font-bold text-orange-600 mt-2">
-                    {overview.lateRate.toFixed(1)}%
+                  <p className="text-sm font-medium text-gray-600">Vắng</p>
+                  <p className="text-3xl font-bold text-red-600 mt-2">
+                    {overview.absentRate.toFixed(1)}%
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{overview.lateCount} lượt</p>
+                  <p className="text-xs text-gray-500 mt-1">{overview.absentCount} lượt</p>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <XCircle className="w-6 h-6 text-red-600" />
                 </div>
               </div>
             </CardContent>
