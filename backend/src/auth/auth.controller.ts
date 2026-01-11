@@ -17,22 +17,27 @@ export class AuthController {
     async login(@Body() loginDto: LoginDto, @Request() req, @Res({ passthrough: true }) res: Response) {
         const result = await this.authService.login(loginDto);
 
-        // More reliable HTTPS detection through proxy
+        // Detect if we are on HTTPS (Cloudflare Tunnel)
         const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
 
         const cookieOptions: any = {
             httpOnly: true,
             secure: isSecure,
-            sameSite: isSecure ? 'none' : 'lax', // Must be 'none' for cross-site HTTPS (Tunnel)
-            path: '/', // Critical: must be available everywhere
+            sameSite: isSecure ? 'none' : 'lax', // 'none' is mandatory for cross-site cookies over HTTPS
+            path: '/',
             maxAge: 30 * 60 * 1000 // 30 mins
         };
 
-        // Set cookies
+        // If it's HTTPS but not recognized as secure by Express, force it if we see the header
+        if (req.headers['x-forwarded-proto'] === 'https' || req.headers['host']?.includes('cloudflare')) {
+            cookieOptions.secure = true;
+            cookieOptions.sameSite = 'none';
+        }
+
         res.cookie('accessToken', result.accessToken, cookieOptions);
         res.cookie('refreshToken', result.refreshToken, {
             ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days for persistent session
         });
 
         return {
@@ -55,11 +60,15 @@ export class AuthController {
             maxAge: 30 * 60 * 1000
         };
 
-        // Set cookies
+        if (req.headers['x-forwarded-proto'] === 'https' || req.headers['host']?.includes('cloudflare')) {
+            cookieOptions.secure = true;
+            cookieOptions.sameSite = 'none';
+        }
+
         res.cookie('accessToken', result.accessToken, cookieOptions);
         res.cookie('refreshToken', result.refreshToken, {
             ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
 
         return {
@@ -81,13 +90,20 @@ export class AuthController {
 
         const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-        res.cookie('accessToken', accessToken, {
+        const cookieOptions: any = {
             httpOnly: true,
             secure: isSecure,
             sameSite: isSecure ? 'none' : 'lax',
             path: '/',
             maxAge: 30 * 60 * 1000
-        });
+        };
+
+        if (req.headers['x-forwarded-proto'] === 'https' || req.headers['host']?.includes('cloudflare')) {
+            cookieOptions.secure = true;
+            cookieOptions.sameSite = 'none';
+        }
+
+        res.cookie('accessToken', accessToken, cookieOptions);
 
         return {
             message: 'Token refreshed'

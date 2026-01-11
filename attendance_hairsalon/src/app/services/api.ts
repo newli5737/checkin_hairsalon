@@ -102,9 +102,9 @@ export const authApi = {
 
         const data = await response.json();
 
-        // Save user info to sessionStorage for immediate UI use
+        // Save user info to localStorage for persistent UI use
         if (data.user) {
-            sessionStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('user', JSON.stringify(data.user));
         }
 
         return data;
@@ -127,9 +127,9 @@ export const authApi = {
 
         const result = await response.json();
 
-        // Save user info to sessionStorage
+        // Save user info to localStorage
         if (result.user) {
-            sessionStorage.setItem('user', JSON.stringify(result.user));
+            localStorage.setItem('user', JSON.stringify(result.user));
         }
 
         return result;
@@ -157,7 +157,7 @@ export const authApi = {
         await apiCall('/auth/logout', {
             method: 'POST',
         });
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('user');
     },
 };
 

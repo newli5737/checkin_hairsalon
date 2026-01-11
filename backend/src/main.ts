@@ -13,9 +13,13 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: true, // Dynamically allow the origin of the request
+    origin: (origin, callback) => {
+      // Allow all origins to support tunnel and multiple local ports
+      // In production with a fixed domain, you should specify it
+      callback(null, true);
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
     credentials: true,
   });
 

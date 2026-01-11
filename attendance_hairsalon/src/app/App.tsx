@@ -20,8 +20,10 @@ import Statistics from "./components/admin/Statistics";
 import { Toaster } from "./components/ui/sonner";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Initialize state from localStorage to prevent flash of login page
+  const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
+  const [isLoggedIn, setIsLoggedIn] = useState(!!savedUser);
+  const [isAdmin, setIsAdmin] = useState(savedUser?.role === 'ADMIN');
 
   useEffect(() => {
     // Check if user is already logged in by fetching profile
@@ -31,12 +33,12 @@ function App() {
         const userData = await authApi.getMe();
         setIsLoggedIn(true);
         setIsAdmin(userData.role === 'ADMIN');
-        sessionStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('user', JSON.stringify(userData));
       } catch (error) {
         // Not logged in or session expired
         setIsLoggedIn(false);
         setIsAdmin(false);
-        sessionStorage.removeItem('user');
+        localStorage.removeItem('user');
       }
     };
 
@@ -58,7 +60,7 @@ function App() {
 
     setIsLoggedIn(false);
     setIsAdmin(false);
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('user');
   };
 
   return (
