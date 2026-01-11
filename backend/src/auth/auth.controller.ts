@@ -14,21 +14,24 @@ export class AuthController {
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
-    async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    async login(@Body() loginDto: LoginDto, @Request() req, @Res({ passthrough: true }) res: Response) {
         const result = await this.authService.login(loginDto);
 
-        // Set cookies
-        res.cookie('accessToken', result.accessToken, {
-            httpOnly: true,
-            secure: false, // Set to true in production with HTTPS
-            sameSite: 'lax',
-            maxAge: 30 * 60 * 1000 // 30 mins
-        });
+        // More reliable HTTPS detection through proxy
+        const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-        res.cookie('refreshToken', result.refreshToken, {
+        const cookieOptions: any = {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: isSecure,
+            sameSite: isSecure ? 'none' : 'lax', // Must be 'none' for cross-site HTTPS (Tunnel)
+            path: '/', // Critical: must be available everywhere
+            maxAge: 30 * 60 * 1000 // 30 mins
+        };
+
+        // Set cookies
+        res.cookie('accessToken', result.accessToken, cookieOptions);
+        res.cookie('refreshToken', result.refreshToken, {
+            ...cookieOptions,
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
@@ -39,21 +42,23 @@ export class AuthController {
     }
 
     @Post('register')
-    async register(@Body() registerDto: any, @Res({ passthrough: true }) res: Response) {
+    async register(@Body() registerDto: any, @Request() req, @Res({ passthrough: true }) res: Response) {
         const result = await this.authService.register(registerDto);
 
-        // Set cookies
-        res.cookie('accessToken', result.accessToken, {
-            httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
-            maxAge: 30 * 60 * 1000
-        });
+        const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
 
-        res.cookie('refreshToken', result.refreshToken, {
+        const cookieOptions: any = {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: isSecure,
+            sameSite: isSecure ? 'none' : 'lax',
+            path: '/',
+            maxAge: 30 * 60 * 1000
+        };
+
+        // Set cookies
+        res.cookie('accessToken', result.accessToken, cookieOptions);
+        res.cookie('refreshToken', result.refreshToken, {
+            ...cookieOptions,
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -74,10 +79,13 @@ export class AuthController {
 
         const { accessToken } = await this.authService.refreshAccessToken(refreshToken);
 
+        const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+
         res.cookie('accessToken', accessToken, {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: isSecure,
+            sameSite: isSecure ? 'none' : 'lax',
+            path: '/',
             maxAge: 30 * 60 * 1000
         });
 
@@ -96,8 +104,8 @@ export class AuthController {
         }
 
         // Clear cookies
-        res.clearCookie('accessToken');
-        res.clearCookie('refreshToken');
+        res.clearCookie('accessToken', { path: '/' });
+        res.clearCookie('refreshToken', { path: '/' });
 
         return { message: 'Đăng xuất thành công' };
     }

@@ -65,7 +65,8 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                 });
 
                 if (retryResponse.ok) {
-                    return retryResponse.json();
+                    const retryData = await retryResponse.json();
+                    return retryData;
                 }
             }
 
